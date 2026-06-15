@@ -15,21 +15,27 @@
 
         body {
             font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, 'Roboto', sans-serif;
-            background: #f8fef8;
+            background: linear-gradient(135deg, #f0f9f0 0%, #e8f0fe 100%);
             color: #1a2e1a;
             scroll-behavior: smooth;
             line-height: 1.5;
         }
 
-        /* Основная зелёная палитра */
+        /* Основная палитра: зелёный + синий */
         :root {
             --primary-green: #2b7a2b;
+            --primary-blue: #2563eb;
             --primary-dark: #1e5a1e;
+            --blue-dark: #1d4ed8;
             --primary-light: #e0f3e0;
+            --blue-light: #dbeafe;
             --accent-green: #3cba3c;
+            --accent-blue: #3b82f6;
             --gray-light: #f4faf4;
             --shadow-sm: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
             --shadow-md: 0 20px 25px -12px rgba(0, 0, 0, 0.08);
+            --gradient-green-blue: linear-gradient(135deg, var(--primary-green), var(--primary-blue));
+            --gradient-blue-green: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
         }
 
         .container {
@@ -40,14 +46,13 @@
 
         /* Header */
         .top-bar {
-            background: white;
+            background: rgba(255, 255, 255, 0.98);
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
             border-bottom: 2px solid var(--primary-light);
             position: sticky;
             top: 0;
             z-index: 100;
             backdrop-filter: blur(2px);
-            background: rgba(255, 255, 255, 0.96);
         }
 
         .nav-container {
@@ -62,7 +67,7 @@
             font-weight: 700;
             font-size: 1.6rem;
             letter-spacing: -0.3px;
-            background: linear-gradient(135deg, var(--primary-green), #0f4f0f);
+            background: var(--gradient-green-blue);
             background-clip: text;
             -webkit-background-clip: text;
             color: transparent;
@@ -98,11 +103,11 @@
         }
 
         .social-btn:hover {
-            background: var(--primary-green);
-            border-color: var(--primary-green);
+            background: var(--gradient-green-blue);
+            border-color: transparent;
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 8px 18px rgba(43, 122, 43, 0.2);
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
         }
 
         /* Hero */
@@ -124,13 +129,13 @@
         }
 
         .hero-badge {
-            background: var(--primary-light);
+            background: linear-gradient(135deg, var(--primary-light), var(--blue-light));
             display: inline-block;
             padding: 6px 14px;
             border-radius: 40px;
             font-size: 0.85rem;
             font-weight: 600;
-            color: var(--primary-green);
+            color: var(--primary-blue);
             margin-bottom: 20px;
         }
 
@@ -143,8 +148,11 @@
         }
 
         .highlight {
-            color: var(--primary-green);
-            border-bottom: 3px solid #8fdc8f;
+            background: var(--gradient-green-blue);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            border-bottom: 3px solid var(--primary-blue);
         }
 
         .hero-desc {
@@ -155,7 +163,7 @@
         }
 
         .btn-primary {
-            background: var(--primary-green);
+            background: var(--gradient-green-blue);
             color: white;
             border: none;
             padding: 14px 32px;
@@ -167,18 +175,19 @@
             align-items: center;
             gap: 12px;
             text-decoration: none;
-            box-shadow: 0 6px 14px rgba(43, 122, 43, 0.25);
+            box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25);
             transition: 0.2s;
         }
 
         .btn-primary:hover {
-            background: var(--primary-dark);
+            background: var(--gradient-blue-green);
             transform: scale(1.02);
+            box-shadow: 0 12px 22px rgba(37, 99, 235, 0.3);
         }
 
         .hero-illustration {
             flex: 1;
-            background: linear-gradient(145deg, #e6f5e6, #ffffff);
+            background: linear-gradient(145deg, #e6f5e6, #e0edfe);
             border-radius: 70px;
             padding: 20px;
             text-align: center;
@@ -187,14 +196,17 @@
 
         .hero-illustration i {
             font-size: 8rem;
-            color: var(--primary-green);
-            opacity: 0.8;
+            background: var(--gradient-green-blue);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            opacity: 0.9;
         }
 
         /* Services */
         .services {
             padding: 70px 0;
-            background: var(--gray-light);
+            background: linear-gradient(135deg, #ffffff, #f0f6fe);
         }
 
         .section-title {
@@ -202,7 +214,10 @@
             font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 20px;
-            color: #1a401a;
+            background: var(--gradient-green-blue);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
         }
 
         .section-sub {
@@ -229,39 +244,67 @@
             transition: all 0.3s ease;
             border: 1px solid #daf4da;
             box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-green-blue);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .service-card:hover::before {
+            transform: scaleX(1);
         }
 
         .service-card:hover {
             transform: translateY(-8px);
-            border-color: var(--primary-green);
+            border-color: var(--primary-blue);
+            box-shadow: 0 25px 30px -12px rgba(37, 99, 235, 0.15);
         }
 
         .card-icon {
             font-size: 2.8rem;
-            color: var(--primary-green);
+            background: var(--gradient-green-blue);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
             margin-bottom: 20px;
         }
 
         .service-card h3 {
             font-size: 1.7rem;
             margin-bottom: 15px;
+            color: #1a401a;
         }
 
         .tech-tag {
             display: inline-block;
-            background: #eef9ee;
+            background: linear-gradient(135deg, #eef9ee, #dbeafe);
             padding: 5px 12px;
             border-radius: 50px;
             font-size: 0.8rem;
             font-weight: 500;
-            color: var(--primary-green);
+            background: var(--gradient-green-blue);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
             margin-right: 8px;
             margin-top: 6px;
+            border: 1px solid #c7e2c7;
         }
 
         /* Portfolio */
         .portfolio {
             padding: 70px 0;
+            background: white;
         }
 
         .portfolio-showcase {
@@ -284,17 +327,28 @@
 
         .portfolio-item:hover {
             transform: translateY(-5px);
-            border-color: var(--primary-green);
+            border-color: var(--primary-blue);
+            box-shadow: 0 15px 25px -12px rgba(37, 99, 235, 0.2);
         }
 
         .portfolio-img {
-            background: #c9e9c9;
+            background: linear-gradient(135deg, #c9e9c9, #bfd9fe);
             height: 160px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 3rem;
-            color: var(--primary-green);
+            background: var(--gradient-green-blue);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .portfolio-img i {
+            background: var(--gradient-green-blue);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
         }
 
         .portfolio-info {
@@ -304,6 +358,7 @@
         .portfolio-info h4 {
             font-size: 1.3rem;
             margin-bottom: 8px;
+            color: #1a401a;
         }
 
         /* Contact Form */
@@ -320,13 +375,28 @@
             box-shadow: var(--shadow-md);
             border: 1px solid #e2f0e2;
             transition: transform 0.2s;
+            position: relative;
+        }
+
+        .contact-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: var(--gradient-green-blue);
+            border-radius: 32px 32px 0 0;
         }
 
         .contact-card h2 {
             text-align: center;
             margin-top: 0;
             margin-bottom: 12px;
-            color: #1a401a;
+            background: var(--gradient-green-blue);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
             font-size: 1.9rem;
             font-weight: 700;
         }
@@ -346,7 +416,10 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #2b4f2b;
+            background: var(--gradient-green-blue);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
             font-size: 0.9rem;
         }
 
@@ -363,8 +436,8 @@
         }
 
         .form-group input:focus {
-            border-color: var(--primary-green);
-            box-shadow: 0 0 0 3px rgba(43, 122, 43, 0.1);
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
         /* Специальный блок-подсказка для Telegram ника */
@@ -374,8 +447,7 @@
             gap: 8px;
             margin-top: 6px;
             font-size: 0.75rem;
-            color: #4a764a;
-            background: #f0faf0;
+            background: linear-gradient(135deg, #f0faf0, #e0edfe);
             padding: 6px 12px;
             border-radius: 100px;
             width: fit-content;
@@ -383,13 +455,17 @@
 
         .telegram-hint i {
             font-size: 0.8rem;
-            color: var(--primary-green);
+            color: var(--primary-blue);
+        }
+
+        .telegram-hint span {
+            color: #2e612e;
         }
 
         .submit-btn {
             width: 100%;
             padding: 14px;
-            background: var(--primary-green);
+            background: var(--gradient-green-blue);
             border: none;
             border-radius: 40px;
             color: white;
@@ -406,29 +482,57 @@
         }
 
         .submit-btn:hover {
-            background: var(--primary-dark);
+            background: var(--gradient-blue-green);
             transform: scale(1.01);
-            box-shadow: 0 6px 14px rgba(43, 122, 43, 0.3);
+            box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
         }
 
         /* CTA */
         .cta {
-            background: var(--primary-green);
+            background: var(--gradient-green-blue);
             color: white;
             padding: 50px 0;
             text-align: center;
             border-radius: 48px;
             margin: 30px 0 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: shimmer 8s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translate(-30%, -30%) rotate(0deg); }
+            100% { transform: translate(30%, 30%) rotate(360deg); }
         }
 
         .cta h2 {
             font-size: 2.1rem;
             margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta p {
+            position: relative;
+            z-index: 1;
         }
 
         .cta .btn-secondary {
             background: white;
-            color: var(--primary-green);
+            background: var(--gradient-blue-green);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
             padding: 12px 32px;
             border-radius: 60px;
             font-weight: bold;
@@ -437,11 +541,21 @@
             gap: 12px;
             text-decoration: none;
             transition: 0.2s;
+            background-color: white;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta .btn-secondary i {
+            background: var(--gradient-green-blue);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
         }
 
         .cta .btn-secondary:hover {
-            background: #f0fff0;
             transform: scale(1.02);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.15);
         }
 
         footer {
@@ -526,8 +640,8 @@
             <div class="hero-illustration">
                 <i class="fas fa-robot"></i>
                 <div style="margin-top: 15px;">
-                    <i class="fas fa-comment-dots" style="font-size: 2rem; margin: 0 8px;"></i>
-                    <i class="fas fa-globe" style="font-size: 2rem; margin: 0 8px;"></i>
+                    <i class="fas fa-comment-dots" style="font-size: 2rem; margin: 0 8px; background: var(--gradient-green-blue); background-clip: text; -webkit-background-clip: text; color: transparent;"></i>
+                    <i class="fas fa-globe" style="font-size: 2rem; margin: 0 8px; background: var(--gradient-green-blue); background-clip: text; -webkit-background-clip: text; color: transparent;"></i>
                 </div>
                 <p style="margin-top: 16px; font-weight: 500;">🤖 AI Telegram Bot + 🖥️ landing pages</p>
             </div>
@@ -602,7 +716,7 @@
                     </div>
                     <div class="portfolio-info">
                         <h4>Портфолио дизайнера</h4>
-                        <p>Одностраничный сайт-визитка с галереей работ и формой связи. Зеленая эстетика.</p>
+                        <p>Одностраничный сайт-визитка с галереей работ и формой связи. Зелено-синяя эстетика.</p>
                         <span class="tech-tag">Landing</span><span class="tech-tag">Анимация</span>
                     </div>
                 </div>
@@ -633,7 +747,7 @@
     <!-- ФОРМА СВЯЗИ (с чётким пояснением про Telegram ник) -->
     <div class="contact-form-wrapper" id="feedback-form-section">
         <div class="contact-card">
-            <h2><i class="far fa-envelope" style="margin-right: 10px; color: var(--primary-green);"></i> Связаться со мной</h2>
+            <h2><i class="far fa-envelope" style="margin-right: 10px;"></i> Связаться со мной</h2>
             <div class="form-sub">Заполните форму, и я отвечу в ближайшее время</div>
             <form action="https://formspree.io/f/xgobndjn" method="POST">
                 <div class="form-group">
@@ -647,7 +761,6 @@
                 <div class="form-group">
                     <label for="telegram">Ник Telegram</label>
                     <input type="text" id="telegram" name="telegram" placeholder="@username">
-                    <!-- Важное уточнение: для отправки нужен символ @ -->
                     <div class="telegram-hint">
                         <i class="fab fa-telegram"></i>
                         <span>Для связи через Telegram укажите ник с <strong>@</strong> (например, @ivanov)</span>
@@ -669,9 +782,9 @@
             <h2>🔥 Готов обсудить ваш проект</h2>
             <p style="margin-bottom: 28px; max-width: 550px; margin-left: auto; margin-right: auto;">Напишите в Telegram, WhatsApp или оставьте заявку выше — отвечу в течение часа!</p>
             <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-                <a href="https://t.me/your_freelance_bot" target="_blank" class="btn-secondary" style="background: white; color:#2b7a2b;"><i class="fab fa-telegram-plane"></i> Telegram</a>
-                <a href="https://wa.me/79991234567?text=Привет!%20Хочу%20заказать%20чат-бота%20или%20сайт" target="_blank" class="btn-secondary" style="background: white; color:#2b7a2b;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
-                <a href="#feedback-form-section" class="btn-secondary" style="background: white; color:#2b7a2b;"><i class="far fa-envelope"></i> Написать Email</a>
+                <a href="https://t.me/your_freelance_bot" target="_blank" class="btn-secondary" style="background: white; color:#2563eb;"><i class="fab fa-telegram-plane"></i> Telegram</a>
+                <a href="https://wa.me/79991234567?text=Привет!%20Хочу%20заказать%20чат-бота%20или%20сайт" target="_blank" class="btn-secondary" style="background: white; color:#2563eb;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+                <a href="#feedback-form-section" class="btn-secondary" style="background: white; color:#2563eb;"><i class="far fa-envelope"></i> Написать Email</a>
             </div>
             <p style="margin-top: 32px; font-size: 0.9rem;">✨ Быстрая связь, гибкие цены, гарантия результата ✨</p>
         </div>
@@ -683,9 +796,9 @@
         <p>© 2025 AI Freelance — Чат-боты с искусственным интеллектом и сайты-визитки на заказ.</p>
         <p style="margin-top: 8px;">
             <i class="fab fa-telegram"></i> Telegram · 
-            <i class="fab fa-whatsapp"></i> WhatsApp         
+            <i class="fab fa-whatsapp"></i> WhatsApp
         </p>
-        <p style="margin-top: 12px; font-size: 0.8rem;">Инновационные решения для вашего бизнеса.</p>
+        <p style="margin-top: 12px; font-size: 0.8rem;">Инновационные решения для вашего бизнеса. Зелёный + синий — гармония технологий.</p>
     </div>
 </footer>
 
