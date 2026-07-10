@@ -11,6 +11,14 @@ OPENROUTER_KEY = os.getenv("OPENROUTER_KEY")
 SITE_URL = "https://borisov.store"
 PORT = int(os.getenv("PORT", 10000))
 
+# ========== АВТО-СБРОС WEBHOOK ==========
+async def delete_webhook():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook") as resp:
+            result = await resp.json()
+            print(f"Webhook deleted: {result}")
+# =========================================
+
 # База знаний
 KNOWLEDGE = """
 Ты — официальный представитель и консультант сервиса по созданию сайтов borisov.store.
@@ -119,6 +127,7 @@ async def run_web_server():
 
 # ========== ЗАПУСК ==========
 async def main():
+    await delete_webhook()
     await run_web_server()
     await dp.start_polling(bot)
 
