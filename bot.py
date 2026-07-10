@@ -1,5 +1,6 @@
 import os
 import asyncio
+import aiohttp
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
