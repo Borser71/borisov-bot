@@ -129,9 +129,14 @@ main_kb = types.ReplyKeyboardMarkup(
     resize_keyboard=True,
 )
 
+# ========== ФЛАГИ ПОКАЗА МЕНЮ ==========
+menu_shown = set()
+
 # ========== ОБРАБОТЧИКИ ==========
 @dp.message(CommandStart())
 async def start(message: types.Message):
+    user_id = message.from_user.id
+    menu_shown.add(user_id)
     await message.answer(
         "Здравствуйте! Я виртуальный консультант сервиса borisov.store.\n"
         "Я расскажу об услугах, сроках, оплате и гарантиях.\n"
@@ -142,6 +147,7 @@ async def start(message: types.Message):
 @dp.message()
 async def handle_question(message: types.Message):
     user_text = message.text
+    user_id = message.from_user.id
     await bot.send_chat_action(message.chat.id, "typing")
 
     # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ТЕХНОЛОГИИ» ---
@@ -215,6 +221,18 @@ async def handle_question(message: types.Message):
         await message.answer(answer, reply_markup=inline_kb)
         return
 
+    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ПРЕИМУЩЕСТВА» (новая кнопка) ---
+    if user_text == "⚡ Преимущества":
+        answer = (
+            "Наши преимущества помогут вам выделиться среди конкурентов и привлечь больше клиентов.\n\n"
+            "Подробно о них можно узнать, нажав кнопку «Перейти на сайт» — она откроет раздел «Почему выбирают нас»."
+        )
+        inline_kb = types.InlineKeyboardMarkup(
+            inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/#advantages")]]
+        )
+        await message.answer(answer, reply_markup=inline_kb)
+        return
+
     # --- ОСНОВНАЯ ЛОГИКА (нейросеть) ---
     try:
         response = await client.chat.completions.create(
@@ -239,13 +257,16 @@ async def handle_question(message: types.Message):
     else:
         target_url = BUTTON_LINKS.get(user_text, SITE_URL)
 
-    # Отправляем ответ вместе с меню (чтобы меню не пропадало)
+    # Отправляем ответ
     inline_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url=target_url)]]
     )
     await message.answer(answer, reply_markup=inline_kb)
-    # Показываем основное меню, если вдруг оно пропало
-    await message.answer("Воспользуйтесь меню ниже:", reply_markup=main_kb)
+
+    # Показываем меню только один раз
+    if user_id not in menu_shown:
+        menu_shown.add(user_id)
+        await message.answer("Воспользуйтесь меню ниже:", reply_markup=main_kb)
 
 # ========== HTTP-СЕРВЕР ДЛЯ RENDER ==========
 async def handle(request):
