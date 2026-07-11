@@ -66,12 +66,9 @@ dp = Dispatcher()
 # ========== КНОПКИ ==========
 main_kb = types.ReplyKeyboardMarkup(
     keyboard=[
-        [types.KeyboardButton(text="🛍 Услуги и тарифы")],
-        [types.KeyboardButton(text="🚚 Сроки и доставка сайта")],
-        [types.KeyboardButton(text="💳 Оплата")],
-        [types.KeyboardButton(text="↩️ Гарантии и возврат")],
-        [types.KeyboardButton(text="📞 Контакты")],
-        [types.KeyboardButton(text="🛡 Проверка самозанятого")],
+        [types.KeyboardButton(text="🛍 Услуги и тарифы"), types.KeyboardButton(text="🚚 Сроки и доставка сайта")],
+        [types.KeyboardButton(text="💳 Оплата"), types.KeyboardButton(text="↩️ Гарантии и возврат")],
+        [types.KeyboardButton(text="📞 Контакты"), types.KeyboardButton(text="🛡 Проверка самозанятого")],
     ],
     resize_keyboard=True,
 )
