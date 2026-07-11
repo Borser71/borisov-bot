@@ -103,8 +103,8 @@ def is_offer_request(text: str) -> bool:
     text_lower = text.lower()
     return any(keyword in text_lower for keyword in OFFER_KEYWORDS)
 
-# ========== ТРИГГЕРЫ ДЛЯ САМОЗАНЯТОГО ==========
-SELFEMPLOYED_KEYWORDS = ["ты кто", "кто ты", "исполнитель", "самозанят", "проверк", "статус", "бор", "сергей"]
+# ========== ТРИГГЕРЫ ДЛЯ САМОЗАНЯТОГО (исправлено) ==========
+SELFEMPLOYED_KEYWORDS = ["самозанят", "проверк", "статус", "налогов", "инн"]
 
 def is_selfemployed_request(text: str) -> bool:
     text_lower = text.lower()
@@ -119,35 +119,57 @@ client = AsyncOpenAI(
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# ========== КНОПКИ МЕНЮ (4×2 + 🔄 Меню) ==========
-main_kb = types.ReplyKeyboardMarkup(
+# ========== ХРАНЕНИЕ СОСТОЯНИЯ МЕНЮ ==========
+# True = меню развернуто, False = свернуто (только кнопка "Меню")
+user_menu_expanded = {}
+
+# ========== КЛАВИАТУРЫ ==========
+collapsed_kb = types.ReplyKeyboardMarkup(
+    keyboard=[[types.KeyboardButton(text="🔄 Меню")]],
+    resize_keyboard=True,
+)
+
+expanded_kb = types.ReplyKeyboardMarkup(
     keyboard=[
+        [types.KeyboardButton(text="🔄 Меню")],
         [types.KeyboardButton(text="🛠 Наши услуги"), types.KeyboardButton(text="🚚 Сроки и доставка")],
         [types.KeyboardButton(text="💳 Оплата"), types.KeyboardButton(text="↩️ Гарантии и возврат")],
         [types.KeyboardButton(text="📞 Контакты"), types.KeyboardButton(text="🛡 Проверка самозанятого")],
         [types.KeyboardButton(text="⚙️ Технологии"), types.KeyboardButton(text="⚡ Преимущества")],
-        [types.KeyboardButton(text="🔄 Меню")],
     ],
     resize_keyboard=True,
 )
 
 # ========== ОБРАБОТЧИКИ ==========
 @dp.message(CommandStart())
-@dp.message(lambda msg: msg.text == "🔄 Меню")
 async def start(message: types.Message):
+    user_id = message.from_user.id
+    user_menu_expanded[user_id] = True
     await message.answer(
         "Здравствуйте! Я виртуальный консультант сервиса borisov.store.\n"
         "Я расскажу об услугах, сроках, оплате и гарантиях.\n"
-        "Задайте вопрос или воспользуйтесь кнопками ниже.",
-        reply_markup=main_kb,
+        "Нажмите 🔄 Меню, чтобы свернуть/развернуть меню.",
+        reply_markup=expanded_kb,
     )
 
 @dp.message()
 async def handle_question(message: types.Message):
     user_text = message.text
+    user_id = message.from_user.id
     await bot.send_chat_action(message.chat.id, "typing")
 
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ТЕХНОЛОГИИ» ---
+    # Логика сворачивания/разворачивания меню
+    if user_text == "🔄 Меню":
+        current = user_menu_expanded.get(user_id, True)
+        new_state = not current
+        user_menu_expanded[user_id] = new_state
+        if new_state:
+            await message.answer("Меню развёрнуто. Выберите нужный раздел.", reply_markup=expanded_kb)
+        else:
+            await message.answer("Меню свёрнуто. Нажмите 🔄 Меню для доступа к разделам.", reply_markup=collapsed_kb)
+        return
+
+    # --- ФИКСИРОВАННЫЕ ОТВЕТЫ ДЛЯ КНОПОК ---
     if user_text == "⚙️ Технологии":
         answer = (
             "🛠 <b>Наши технологии</b>\n\n"
@@ -163,7 +185,6 @@ async def handle_question(message: types.Message):
         await message.answer(answer, reply_markup=inline_kb, parse_mode="HTML")
         return
 
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ГАРАНТИИ И ВОЗВРАТ» ---
     if user_text == "↩️ Гарантии и возврат":
         answer = (
             "На сервисе borisov.store мы предоставляем гарантийную поддержку в течение 30 дней после завершения разработки.\n\n"
@@ -176,7 +197,6 @@ async def handle_question(message: types.Message):
         await message.answer(answer, reply_markup=inline_kb)
         return
 
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ОПЛАТА» ---
     if user_text == "💳 Оплата":
         answer = (
             "Мы принимаем оплату через ЮKassa — это безопасный и надёжный способ для ваших клиентов, "
@@ -192,7 +212,6 @@ async def handle_question(message: types.Message):
         await message.answer(answer, reply_markup=inline_kb, parse_mode="HTML")
         return
 
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «СРОКИ И ДОСТАВКА» ---
     if user_text == "🚚 Сроки и доставка":
         answer = (
             "Стандартный срок разработки сайта — до 3 рабочих дней с момента получения предоплаты и всех материалов.\n\n"
@@ -205,7 +224,6 @@ async def handle_question(message: types.Message):
         await message.answer(answer, reply_markup=inline_kb)
         return
 
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ПРОВЕРКА САМОЗАНЯТОГО» ---
     if user_text == "🛡 Проверка самозанятого":
         answer = (
             "Исполнитель — Борисов Сергей Юрьевич, самозанятый.\n"
