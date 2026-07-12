@@ -234,7 +234,7 @@ async def handle_question(message: types.Message):
     # --- ОСНОВНАЯ ЛОГИКА (нейросеть) ---
     try:
         response = await client.chat.completions.create(
-            model="deepseek/deepseek-v4-flash",
+            model="google/gemini-2.5-flash-lite",
             messages=[
                 {"role": "system", "content": f"{KNOWLEDGE}\n\nОтвечай без прямых ссылок. Ссылки могут быть только на кнопке «Перейти на сайт»."},
                 {"role": "user", "content": user_text},
