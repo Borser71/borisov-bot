@@ -268,7 +268,7 @@ async def handle_question(message: types.Message):
 
 # ========== HTTP-СЕРВЕР ДЛЯ RENDER ==========
 async def handle(request):
-    return web.Response(text="OK")
+    return web.Response(status=204)
 
 async def run_web_server():
     app = web.Application()
