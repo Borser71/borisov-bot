@@ -101,7 +101,7 @@ def is_offer_request(text: str) -> bool:
     return any(keyword in text_lower for keyword in OFFER_KEYWORDS)
 
 # ========== ТРИГГЕРЫ ДЛЯ САМОЗАНЯТОГО (исправлено) ==========
-SELFEMPLOYED_KEYWORDS = ["самозанят", "проверк", "статус", "налогов", "инн"]
+SELFEMPLOYED_KEYWORDS = ["самозанят", "проверк", "статус", "налог", "инн"]
 
 def is_selfemployed_request(text: str) -> bool:
     text_lower = text.lower()
