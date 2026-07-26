@@ -205,10 +205,10 @@ async def handle_question(message: types.Message):
         await message.answer(answer, reply_markup=inline_kb)
         return
 
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ПРОВЕРКА САМОЗАНЯТОГО» ---
+    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ПРОВЕРКА САМОЗАНЯТОГО» (точная кнопка) ---
     if user_text == "🛡 Проверка самозанятого":
         answer = (
-            "Исполнитель — Борисов Сергей, самозанятый, ИНН: 665200001260.\n"
+            "Исполнитель — Борисов Сергей, самозанятый, ИНН: 665200001260.\n" 
             "Проверить статус самозанятого можно через официальный сервис Федеральной налоговой службы.\n\n"
             "Для этого нажмите кнопку «Перейти на сайт» — она откроет страницу проверки."
         )
@@ -230,6 +230,11 @@ async def handle_question(message: types.Message):
         await message.answer(answer, reply_markup=inline_kb)
         return
 
+    # --- ЗАПРОСЫ О САМОЗАНЯТОСТИ (без кнопок) ---
+    if is_selfemployed_request(user_text):
+        await message.answer("Выберите в меню: 🛡 Проверка самозанятого")
+        return
+
     # --- ОСНОВНАЯ ЛОГИКА (нейросеть) ---
     try:
         response = await client.chat.completions.create(
@@ -249,8 +254,6 @@ async def handle_question(message: types.Message):
     target_url = SITE_URL
     if is_offer_request(user_text):
         target_url = "https://borisov.store/offer/"
-    elif is_selfemployed_request(user_text):
-        target_url = "https://npd.nalog.ru/check-status/"
     else:
         target_url = BUTTON_LINKS.get(user_text, SITE_URL)
 
