@@ -247,6 +247,8 @@ async def handle_question(message: types.Message):
             max_tokens=400,
         )
         answer = response.choices[0].message.content.strip()
+                # Убираем возможные технические теги, если нейросеть их вставила
+        answer = answer.replace("<button>", "").replace("</button>", "")
     except Exception as e:
         answer = "Извините, произошла ошибка. Попробуйте ещё раз через минуту.\n\nЕсли ошибка повторяется, свяжитесь со мной через контакты на сайте."
 
