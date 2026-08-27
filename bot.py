@@ -2,9 +2,16 @@ import os
 import asyncio
 import aiohttp
 from aiohttp import web
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.filters import CommandStart, Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage
 from openai import AsyncOpenAI
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ========== НАСТРОЙКИ ==========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -12,12 +19,8 @@ OPENROUTER_KEY = os.getenv("OPENROUTER_KEY")
 SITE_URL = "https://borisov.store"
 PORT = int(os.getenv("PORT", 10000))
 
-# ========== АВТО-СБРОС WEBHOOK ==========
-async def delete_webhook():
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook") as resp:
-            result = await resp.json()
-            print(f"Webhook deleted: {result}")
+# ========== ССЫЛКА НА APPS SCRIPT (НОВАЯ ТАБЛИЦА) ==========
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydWa-Yx3M0DlbR9Yer4B2JZfIl6l668vEEoZHIC4XTuTBhdxVF49P8GQUb27HIygRN/exec"
 
 # ========== БАЗА ЗНАНИЙ ==========
 KNOWLEDGE = """
@@ -94,30 +97,39 @@ BUTTON_LINKS = {
     "⚡ Преимущества": "https://borisov.store/#advantages",
 }
 
-# ========== ТРИГГЕРЫ ДЛЯ ОФЕРТЫ ==========
+# ========== ТРИГГЕРЫ ==========
 OFFER_KEYWORDS = ["тз", "задание", "оферт", "договор", "ознакомиться"]
-
 def is_offer_request(text: str) -> bool:
-    text_lower = text.lower()
-    return any(keyword in text_lower for keyword in OFFER_KEYWORDS)
+    return any(kw in text.lower() for kw in OFFER_KEYWORDS)
 
-# ========== ТРИГГЕРЫ ДЛЯ САМОЗАНЯТОГО (исправлено) ==========
 SELFEMPLOYED_KEYWORDS = ["самозанят", "проверк", "статус", "налог", "инн"]
-
 def is_selfemployed_request(text: str) -> bool:
-    text_lower = text.lower()
-    return any(keyword in text_lower for keyword in SELFEMPLOYED_KEYWORDS)
+    return any(kw in text.lower() for kw in SELFEMPLOYED_KEYWORDS)
 
-# ========== КЛИЕНТ OpenRouter ==========
+# ========== OpenRouter ==========
 client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_KEY,
 )
 
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
+# ========== FSM СОСТОЯНИЯ ==========
+class ContactForm(StatesGroup):
+    waiting_for_name = State()
+    waiting_for_phone = State()
 
-# ========== КНОПКИ МЕНЮ (4×2) ==========
+# ========== БОТ И ДИСПЕТЧЕР ==========
+storage = MemoryStorage()
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher(storage=storage)
+
+# ========== КЛАВИАТУРЫ ==========
+# Кнопка для сбора контакта
+contact_kb = types.ReplyKeyboardMarkup(
+    keyboard=[[types.KeyboardButton(text="📝 Оставить контакт")]],
+    resize_keyboard=True
+)
+
+# Главное меню консультанта (8 кнопок)
 main_kb = types.ReplyKeyboardMarkup(
     keyboard=[
         [types.KeyboardButton(text="🛠 Наши услуги"), types.KeyboardButton(text="🚚 Сроки и доставка")],
@@ -125,118 +137,206 @@ main_kb = types.ReplyKeyboardMarkup(
         [types.KeyboardButton(text="📞 Контакты"), types.KeyboardButton(text="🛡 Проверка самозанятого")],
         [types.KeyboardButton(text="⚙️ Технологии"), types.KeyboardButton(text="⚡ Преимущества")],
     ],
-    resize_keyboard=True,
+    resize_keyboard=True
 )
 
-# ========== ФЛАГИ ПОКАЗА МЕНЮ ==========
-menu_shown = set()
+# ========== ХРАНИЛИЩЕ АВТОРИЗОВАННЫХ ==========
+authorized_users = set()
+
+# ========== ФУНКЦИЯ ЗАПИСИ В ТАБЛИЦУ ==========
+async def append_to_sheet(name: str, phone: str, username: str, order: str = ""):
+    """Отправляет данные в Google Apps Script"""
+    now = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    payload = {
+        "timestamp": now,
+        "name": name,
+        "phone": phone,
+        "order": order
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(GOOGLE_SCRIPT_URL, json=payload) as resp:
+                result = await resp.text()
+                print(f"Google Sheets ответил: {result}")
+    except Exception as e:
+        print(f"Ошибка записи в таблицу: {e}")
 
 # ========== ОБРАБОТЧИКИ ==========
 @dp.message(CommandStart())
-async def start(message: types.Message):
+async def start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
-    menu_shown.add(user_id)
+    if user_id in authorized_users:
+        await message.answer(
+            "Здравствуйте! Я виртуальный консультант сервиса borisov.store.\n"
+            "Задайте вопрос или воспользуйтесь кнопками ниже.",
+            reply_markup=main_kb
+        )
+    else:
+        await state.clear()
+        await message.answer(
+            "Здравствуйте! Чтобы начать консультацию, пожалуйста, оставьте свои контактные данные.",
+            reply_markup=contact_kb
+        )
+
+@dp.message(Command("cancel"))
+async def cancel(message: types.Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Действие отменено.", reply_markup=contact_kb)
+
+# ===== СБОР КОНТАКТА =====
+@dp.message(F.text == "📝 Оставить контакт")
+async def start_contact(message: types.Message, state: FSMContext):
+    await state.set_state(ContactForm.waiting_for_name)
+    await message.answer("Как вас зовут?")
+
+@dp.message(ContactForm.waiting_for_name)
+async def process_name(message: types.Message, state: FSMContext):
+    await state.update_data(name=message.text)
+    await state.set_state(ContactForm.waiting_for_phone)
+    await message.answer("Ваш номер телефона (в формате +7XXXXXXXXXX):")
+
+@dp.message(ContactForm.waiting_for_phone)
+async def process_phone(message: types.Message, state: FSMContext):
+    phone = message.text.strip()
+    # Проверка формата
+    if not (phone.startswith("+") and phone[1:].isdigit() and len(phone) >= 12) and not (phone.isdigit() and len(phone) >= 11):
+        await message.answer("Пожалуйста, введите корректный номер (11 цифр или +7XXXXXXXXXX).")
+        return
+
+    data = await state.get_data()
+    name = data["name"]
+    user_id = message.from_user.id
+    username = message.from_user.username or "без username"
+
+    # Запись контакта в таблицу (order = "")
+    await append_to_sheet(name, phone, username, "")
+
+    # Переводим в режим консультанта
+    authorized_users.add(user_id)
+    await state.clear()
+
     await message.answer(
-        "Здравствуйте! Я виртуальный консультант сервиса borisov.store.\n"
-        "Я расскажу об услугах, сроках, оплате и гарантиях.\n"
+        f"Спасибо, {name}! Теперь я ваш консультант.\n"
         "Задайте вопрос или воспользуйтесь кнопками ниже.",
-        reply_markup=main_kb,
+        reply_markup=main_kb
     )
 
+# ===== РЕЖИМ КОНСУЛЬТАНТА (обработка кнопок) =====
+
+@dp.message(F.text == "⚙️ Технологии")
+async def handle_tech(message: types.Message):
+    answer = (
+        "🛠 <b>Наши технологии</b>\n\n"
+        "🔹 <b>HTML5</b> — структура и разметка. Семантическая вёрстка, адаптивность, корректное отображение в любых браузерах.\n\n"
+        "🔹 <b>CSS3</b> — дизайн и стили. Современный внешний вид, анимации, идеальная раскладка на всех устройствах.\n\n"
+        "🔹 <b>JavaScript</b> — интерактивность и поведение. Умные формы, плавные переходы, динамический контент без перезагрузки.\n\n"
+        "📊 <b>Мини-CRM на Google Таблицах</b> — все заявки попадают в таблицу и дублируются вам на почту. Без лимитов.\n\n"
+        "💳 <b>Приём платежей через ЮKassa</b> — автоматическая, безопасная и надёжная оплата через СБП и карты."
+    )
+    inline_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url=SITE_URL)]]
+    )
+    await message.answer(answer, reply_markup=inline_kb, parse_mode="HTML")
+
+@dp.message(F.text == "↩️ Гарантии")
+async def handle_guarantee(message: types.Message):
+    answer = (
+        "На сервисе borisov.store мы предоставляем гарантийную поддержку в течение 30 дней после завершения разработки.\n\n"
+        "Для получения более подробной информации, пожалуйста, нажмите кнопку «Перейти на сайт»."
+    )
+    inline_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/offer/")]]
+    )
+    await message.answer(answer, reply_markup=inline_kb)
+
+@dp.message(F.text == "💳 Оплата")
+async def handle_payment(message: types.Message):
+    answer = (
+        "Мы принимаем оплату через ЮKassa — это безопасный и надёжный способ оплаты, "
+        "поддерживающий банковские карты, электронные кошельки и СБП. Также мы можем предложить Яндекс Сплит (рассрочку) и криптовалюту - USDT и USDC (сети Optimism, Arbitrum).\n\n"
+        "<b>Порядок оплаты:</b>\n"
+        "• Предоплата 50% перед началом работы.\n"
+        "• Вторые 50% после приёмки готового сайта.\n\n"
+        "Для получения более подробной информации, пожалуйста, нажмите кнопку «Перейти на сайт»."
+    )
+    inline_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/#pricing")]]
+    )
+    await message.answer(answer, reply_markup=inline_kb, parse_mode="HTML")
+
+@dp.message(F.text == "🚚 Сроки и доставка")
+async def handle_delivery(message: types.Message):
+    answer = (
+        "Стандартный срок разработки сайта — до 3 рабочих дней с момента получения предоплаты и всех материалов.\n\n"
+        "В сложных случаях срок может быть увеличен до 7 рабочих дней. Подробнее — в пункте 6.1 оферты.\n\n"
+        "Для получения более подробной информации, пожалуйста, нажмите кнопку «Перейти на сайт»."
+    )
+    inline_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/offer/")]]
+    )
+    await message.answer(answer, reply_markup=inline_kb)
+
+@dp.message(F.text == "🛡 Проверка самозанятого")
+async def handle_selfemployed(message: types.Message):
+    answer = (
+        "Исполнитель — Борисов Сергей, самозанятый, ИНН: 665200001260.\n"
+        "Проверить статус самозанятого можно через официальный сервис Федеральной налоговой службы.\n\n"
+        "Для этого нажмите кнопку «Перейти на сайт» — она откроет страницу проверки."
+    )
+    inline_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://npd.nalog.ru/check-status/")]]
+    )
+    await message.answer(answer, reply_markup=inline_kb)
+
+@dp.message(F.text == "⚡ Преимущества")
+async def handle_advantages(message: types.Message):
+    answer = (
+        "Наши преимущества помогут вам выделиться среди конкурентов и привлечь больше клиентов.\n\n"
+        "Подробно о них можно узнать, нажав кнопку «Перейти на сайт» — она откроет раздел «Почему выбирают нас»."
+    )
+    inline_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/#advantages")]]
+    )
+    await message.answer(answer, reply_markup=inline_kb)
+
+@dp.message(F.text == "📞 Контакты")
+async def handle_contacts(message: types.Message):
+    answer = (
+        "Свяжитесь с нами любым удобным способом:\n\n"
+        "📧 Email: wisebor@gmail.com\n"
+        "📱 Telegram: @borisovsergey71\n"
+        "🌐 Сайт: https://borisov.store"
+    )
+    await message.answer(answer)
+
+# ===== ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ (НЕЙРОСЕТЬ) =====
 @dp.message()
-async def handle_question(message: types.Message):
-    user_text = message.text
+async def handle_question(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
+    user_text = message.text
+
+    # Проверка авторизации
+    if user_id not in authorized_users:
+        await message.answer(
+            "Пожалуйста, сначала оставьте контактные данные, нажав кнопку «Оставить контакт».",
+            reply_markup=contact_kb
+        )
+        return
+
+    # Проверка, не находится ли пользователь в процессе ввода контакта
+    current_state = await state.get_state()
+    if current_state in [ContactForm.waiting_for_name.state, ContactForm.waiting_for_phone.state]:
+        await message.answer("Пожалуйста, завершите ввод контакта или отправьте /cancel для отмены.")
+        return
+
     await bot.send_chat_action(message.chat.id, "typing")
 
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ТЕХНОЛОГИИ» ---
-    if user_text == "⚙️ Технологии":
-        answer = (
-            "🛠 <b>Наши технологии</b>\n\n"
-            "🔹 <b>HTML5</b> — структура и разметка. Семантическая вёрстка, адаптивность, корректное отображение в любых браузерах.\n\n"
-            "🔹 <b>CSS3</b> — дизайн и стили. Современный внешний вид, анимации, идеальная раскладка на всех устройствах.\n\n"
-            "🔹 <b>JavaScript</b> — интерактивность и поведение. Умные формы, плавные переходы, динамический контент без перезагрузки.\n\n"
-            "📊 <b>Мини-CRM на Google Таблицах</b> — все заявки попадают в таблицу и дублируются вам на почту. Без лимитов.\n\n"
-            "💳 <b>Приём платежей через ЮKassa</b> — автоматическая, безопасная и надёжная оплата через СБП и карты."
-        )
-        inline_kb = types.InlineKeyboardMarkup(
-            inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url=SITE_URL)]]
-        )
-        await message.answer(answer, reply_markup=inline_kb, parse_mode="HTML")
-        return
-
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ГАРАНТИИ» ---
-    if user_text == "↩️ Гарантии":
-        answer = (
-            "На сервисе borisov.store мы предоставляем гарантийную поддержку в течение 30 дней после завершения разработки.\n\n"            
-            "Для получения более подробной информации, пожалуйста, нажмите кнопку «Перейти на сайт»."
-        )
-        inline_kb = types.InlineKeyboardMarkup(
-            inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/offer/")]]
-        )
-        await message.answer(answer, reply_markup=inline_kb)
-        return
-
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ОПЛАТА» (исправлено "для ваших клиентов") ---
-    if user_text == "💳 Оплата":
-        answer = (
-            "Мы принимаем оплату через ЮKassa — это безопасный и надёжный способ оплаты, "
-            "поддерживающий банковские карты, электронные кошельки и СБП. Также мы можем предложить Яндекс Сплит (рассрочку) и криптовалюту - USDT и USDC (сети Optimism, Arbitrum).\n\n"
-            "<b>Порядок оплаты:</b>\n"
-            "• Предоплата 50% перед началом работы.\n"
-            "• Вторые 50% после приёмки готового сайта.\n\n"
-            "Для получения более подробной информации, пожалуйста, нажмите кнопку «Перейти на сайт»."
-        )
-        inline_kb = types.InlineKeyboardMarkup(
-            inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/#pricing")]]
-        )
-        await message.answer(answer, reply_markup=inline_kb, parse_mode="HTML")
-        return
-
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «СРОКИ И ДОСТАВКА» ---
-    if user_text == "🚚 Сроки и доставка":
-        answer = (
-            "Стандартный срок разработки сайта — до 3 рабочих дней с момента получения предоплаты и всех материалов.\n\n"
-            "В сложных случаях срок может быть увеличен до 7 рабочих дней. Подробнее — в пункте 6.1 оферты.\n\n"
-            "Для получения более подробной информации, пожалуйста, нажмите кнопку «Перейти на сайт»."
-        )
-        inline_kb = types.InlineKeyboardMarkup(
-            inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/offer/")]]
-        )
-        await message.answer(answer, reply_markup=inline_kb)
-        return
-
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ПРОВЕРКА САМОЗАНЯТОГО» (точная кнопка) ---
-    if user_text == "🛡 Проверка самозанятого":
-        answer = (
-            "Исполнитель — Борисов Сергей, самозанятый, ИНН: 665200001260.\n" 
-            "Проверить статус самозанятого можно через официальный сервис Федеральной налоговой службы.\n\n"
-            "Для этого нажмите кнопку «Перейти на сайт» — она откроет страницу проверки."
-        )
-        inline_kb = types.InlineKeyboardMarkup(
-            inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://npd.nalog.ru/check-status/")]]
-        )
-        await message.answer(answer, reply_markup=inline_kb)
-        return
-
-    # --- ФИКСИРОВАННЫЙ ОТВЕТ ДЛЯ «ПРЕИМУЩЕСТВА» ---
-    if user_text == "⚡ Преимущества":
-        answer = (
-            "Наши преимущества помогут вам выделиться среди конкурентов и привлечь больше клиентов.\n\n"
-            "Подробно о них можно узнать, нажав кнопку «Перейти на сайт» — она откроет раздел «Почему выбирают нас»."
-        )
-        inline_kb = types.InlineKeyboardMarkup(
-            inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/#advantages")]]
-        )
-        await message.answer(answer, reply_markup=inline_kb)
-        return
-
-    # --- ЗАПРОСЫ О САМОЗАНЯТОСТИ (без кнопок) ---
+    # Запросы о самозанятости
     if is_selfemployed_request(user_text):
         await message.answer("Выберите в меню: 🛡 Проверка самозанятого")
         return
 
-    # --- ОСНОВНАЯ ЛОГИКА (нейросеть) ---
+    # Основная логика через нейросеть
     try:
         response = await client.chat.completions.create(
             model="google/gemini-2.5-flash-lite",
@@ -248,28 +348,21 @@ async def handle_question(message: types.Message):
             max_tokens=400,
         )
         answer = response.choices[0].message.content.strip()
-                # Убираем возможные технические теги, если нейросеть их вставила
         answer = answer.replace("<button>", "").replace("</button>", "")
     except Exception as e:
         answer = "Извините, произошла ошибка. Попробуйте ещё раз через минуту.\n\nЕсли ошибка повторяется, свяжитесь со мной через контакты на сайте."
 
-    # Определяем, куда ведёт кнопка «Перейти на сайт»
+    # Определяем ссылку для кнопки
     target_url = SITE_URL
     if is_offer_request(user_text):
         target_url = "https://borisov.store/offer/"
     else:
         target_url = BUTTON_LINKS.get(user_text, SITE_URL)
 
-    # Отправляем ответ
     inline_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url=target_url)]]
     )
     await message.answer(answer, reply_markup=inline_kb)
-
-    # Показываем меню только один раз
-    if user_id not in menu_shown:
-        menu_shown.add(user_id)
-        await message.answer("Воспользуйтесь меню ниже:", reply_markup=main_kb)
 
 # ========== HTTP-СЕРВЕР ДЛЯ RENDER ==========
 async def handle(request):
@@ -284,7 +377,12 @@ async def run_web_server():
     await site.start()
     print(f"HTTP server started on port {PORT}")
 
-# ========== ЗАПУСК ==========
+async def delete_webhook():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook") as resp:
+            result = await resp.json()
+            print(f"Webhook deleted: {result}")
+
 async def main():
     await delete_webhook()
     await run_web_server()
@@ -292,4 +390,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
