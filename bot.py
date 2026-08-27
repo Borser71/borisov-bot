@@ -35,16 +35,11 @@ else:
 GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzeaN4cYCw7emtUJoobYMRSibWPsVdLjLxD1cXGA2ODq3LJyfpEtCvK7kNesBQuzHUeCA/exec"
 
 # ========== БАЗА ЗНАНИЙ (консультант) ==========
+# ВСТАВЬТЕ СЮДА ПОЛНЫЙ ТЕКСТ KNOWLEDGE ИЗ ВАШЕГО ФАЙЛА 19.txt
 KNOWLEDGE = """
 Ты — официальный представитель и консультант сервиса borisov.store.
-Твоя задача — помогать клиентам, используя только информацию ниже. Запрещено вставлять прямые ссылки в текст ответа. Используй кнопку «Перейти на сайт».
-
-О СЕРВИСЕ:
-borisov.store — сервис по созданию сайтов на бесплатном хостинге GitHub Pages.
-Исполнитель: Борисов Сергей, самозанятый.
-Мы создаем качественные и функциональные сайты. Чтобы попасть на наш сайт нажмите кнопку «Перейти на сайт» под этим сообщением.
-
-[ОСТАЛЬНОЙ ТЕКСТ KNOWLEDGE (полный из вашего файла 19.txt) ВСТАВЬТЕ СЮДА]
+Твоя задача — помогать клиентам, используя только информация ниже. Запрещено вставлять прямые ссылки в текст ответа. Используй кнопку «Перейти на сайт».
+(ВСТАВЬТЕ ОСТАЛЬНОЙ ТЕКСТ)
 """
 
 # ========== ЦЕНЫ (из MAX-бота) ==========
@@ -101,7 +96,6 @@ BUTTON_LINKS = {
     "📞 Контакты": "https://borisov.store/#contacts",
     "🛡 Проверка самозанятого": "https://npd.nalog.ru/check-status/",
     "⚙️ Технологии": SITE_URL,
-    "⚡ Преимущества": "https://borisov.store/#advantages",
 }
 
 # ========== ТРИГГЕРЫ ==========
@@ -185,7 +179,8 @@ def create_payment(amount: float, description: str, return_url: str) -> str | No
             "amount": {"value": f"{amount:.2f}", "currency": "RUB"},
             "confirmation": {"type": "redirect", "return_url": return_url},
             "description": description,
-            "capture": True
+            "capture": True,
+            "test": True   # если тестовый магазин, оставьте; для боевого удалите или закомментируйте
         }, idempotence_key)
         return payment.confirmation.confirmation_url
     except Exception as e:
@@ -410,8 +405,8 @@ async def confirm_order(message: types.Message, state: FSMContext):
         total = data.get("total", 0)
 
         # Обрезаем описание до 100 символов (чтобы гарантированно уложиться в 128)
-short_description = services_text[:100] + "..." if len(services_text) > 100 else services_text
-payment_url = create_payment(total, f"Заказ: {short_description}", "https://borisov.store/thank-you")
+        short_description = services_text[:100] + "..." if len(services_text) > 100 else services_text
+        payment_url = create_payment(total, f"Заказ: {short_description}", "https://borisov.store/thank-you")
 
         if payment_url:
             # Запись заказа в таблицу
@@ -509,27 +504,6 @@ async def handle_selfemployed(message: types.Message):
     )
     await message.answer(answer, reply_markup=inline_kb)
 
-@dp.message(F.text == "⚡ Преимущества")
-async def handle_advantages(message: types.Message):
-    answer = (
-        "Наши преимущества помогут вам выделиться среди конкурентов и привлечь больше клиентов.\n\n"
-        "Подробно о них можно узнать, нажав кнопку «Перейти на сайт» — она откроет раздел «Почему выбирают нас»."
-    )
-    inline_kb = types.InlineKeyboardMarkup(
-        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/#advantages")]]
-    )
-    await message.answer(answer, reply_markup=inline_kb)
-
-@dp.message(F.text == "📞 Контакты")
-async def handle_contacts(message: types.Message):
-    answer = (
-        "Свяжитесь с нами любым удобным способом:\n\n"
-        "📧 Email: wisebor@gmail.com\n"
-        "📞 Тел.: +79582319212\n"
-        "🌐 Сайт: https://borisov.store"
-    )
-    await message.answer(answer)
-
 @dp.message(F.text == "🛠 Наши услуги")
 async def handle_services(message: types.Message):
     answer = (
@@ -542,6 +516,16 @@ async def handle_services(message: types.Message):
         inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url=SITE_URL)]]
     )
     await message.answer(answer, reply_markup=inline_kb)
+
+@dp.message(F.text == "📞 Контакты")
+async def handle_contacts(message: types.Message):
+    answer = (
+        "Свяжитесь с нами любым удобным способом:\n\n"
+        "📧 Email: wisebor@gmail.com\n"
+        "📞 Телефон: +79582319212\n"
+        "🌐 Сайт: https://borisov.store"
+    )
+    await message.answer(answer)
 
 # ===== ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ (НЕЙРОСЕТЬ) =====
 @dp.message()
