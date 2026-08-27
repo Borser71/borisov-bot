@@ -44,7 +44,7 @@ borisov.store — сервис по созданию сайтов на бесп�
 Исполнитель: Борисов Сергей, самозанятый.
 Мы создаем качественные и функциональные сайты. Чтобы попасть на наш сайт нажмите кнопку «Перейти на сайт» под этим сообщением.
 
-[ОСТАЛЬНОЙ ТЕКСТ KNOWLEDGE ВСТАВЬТЕ ИЗ ВАШЕГО ФАЙЛА]
+[ОСТАЛЬНОЙ ТЕКСТ KNOWLEDGE (полный из вашего файла 19.txt) ВСТАВЬТЕ СЮДА]
 """
 
 # ========== ЦЕНЫ (из MAX-бота) ==========
@@ -101,6 +101,7 @@ BUTTON_LINKS = {
     "📞 Контакты": "https://borisov.store/#contacts",
     "🛡 Проверка самозанятого": "https://npd.nalog.ru/check-status/",
     "⚙️ Технологии": SITE_URL,
+    "⚡ Преимущества": "https://borisov.store/#advantages",
 }
 
 # ========== ТРИГГЕРЫ ==========
@@ -507,6 +508,27 @@ async def handle_selfemployed(message: types.Message):
     )
     await message.answer(answer, reply_markup=inline_kb)
 
+@dp.message(F.text == "⚡ Преимущества")
+async def handle_advantages(message: types.Message):
+    answer = (
+        "Наши преимущества помогут вам выделиться среди конкурентов и привлечь больше клиентов.\n\n"
+        "Подробно о них можно узнать, нажав кнопку «Перейти на сайт» — она откроет раздел «Почему выбирают нас»."
+    )
+    inline_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/#advantages")]]
+    )
+    await message.answer(answer, reply_markup=inline_kb)
+
+@dp.message(F.text == "📞 Контакты")
+async def handle_contacts(message: types.Message):
+    answer = (
+        "Свяжитесь с нами любым удобным способом:\n\n"
+        "📧 Email: wisebor@gmail.com\n"
+        "📞 Тел.: +79582319212\n"
+        "🌐 Сайт: https://borisov.store"
+    )
+    await message.answer(answer)
+
 @dp.message(F.text == "🛠 Наши услуги")
 async def handle_services(message: types.Message):
     answer = (
@@ -519,16 +541,6 @@ async def handle_services(message: types.Message):
         inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url=SITE_URL)]]
     )
     await message.answer(answer, reply_markup=inline_kb)
-
-@dp.message(F.text == "📞 Контакты")
-async def handle_contacts(message: types.Message):
-    answer = (
-        "Свяжитесь с нами любым удобным способом:\n\n"
-        "📧 Email: wisebor@gmail.com\n"
-        "📞 Телефон: +79582319212\n"
-        "🌐 Сайт: https://borisov.store"
-    )
-    await message.answer(answer)
 
 # ===== ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ (НЕЙРОСЕТЬ) =====
 @dp.message()
@@ -608,4 +620,4 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())
