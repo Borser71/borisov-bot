@@ -32,7 +32,7 @@ else:
     print("ЮKassa не настроена (отсутствуют shopId или secretKey)")
 
 # ========== ССЫЛКА НА APPS SCRIPT (НОВАЯ ТАБЛИЦА) ==========
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzeaN4cYCw7emtUJoobYMRSibWPsVdLjLxD1cXGA2ODq3LJyfpEtCvK7kNesBQuzHUeCA/exec"
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwObzBGHaCjBi0J_fOO0tRyo6P50WyINg-P1eVCwKk1uKz5hoZ7XdC5RBmcQ0uSKpazFA/exec"
 
 # ========== БАЗА ЗНАНИЙ (консультант) ==========
 KNOWLEDGE = """
