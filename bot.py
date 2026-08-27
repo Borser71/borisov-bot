@@ -179,8 +179,7 @@ def create_payment(amount: float, description: str, return_url: str) -> str | No
             "amount": {"value": f"{amount:.2f}", "currency": "RUB"},
             "confirmation": {"type": "redirect", "return_url": return_url},
             "description": description,
-            "capture": True,
-            "test": True   # если тестовый магазин, оставьте; для боевого удалите или закомментируйте
+            "capture": True,            
         }, idempotence_key)
         return payment.confirmation.confirmation_url
     except Exception as e:
