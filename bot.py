@@ -409,8 +409,9 @@ async def confirm_order(message: types.Message, state: FSMContext):
         services_text = data.get("services_text", "Без описания")
         total = data.get("total", 0)
 
-        # Создаём платёж
-        payment_url = create_payment(total, f"Заказ в Borisov Store: {services_text}", "https://borisov.store/thank-you")
+        # Обрезаем описание до 100 символов (чтобы гарантированно уложиться в 128)
+short_description = services_text[:100] + "..." if len(services_text) > 100 else services_text
+payment_url = create_payment(total, f"Заказ: {short_description}", "https://borisov.store/thank-you")
 
         if payment_url:
             # Запись заказа в таблицу
