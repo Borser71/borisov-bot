@@ -1,4 +1,4 @@
-import os
+ import os
 import asyncio
 import aiohttp
 import uuid
@@ -32,7 +32,7 @@ else:
     print("ЮKassa не настроена (отсутствуют shopId или secretKey)")
 
 # ========== ССЫЛКА НА APPS SCRIPT (НОВАЯ ТАБЛИЦА) ==========
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydWa-Yx3M0DlbR9Yer4B2JZfIl6l668vEEoZHIC4XTuTBhdxVF49P8GQUb27HIygRN/exec"
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzeaN4cYCw7emtUJoobYMRSibWPsVdLjLxD1cXGA2ODq3LJyfpEtCvK7kNesBQuzHUeCA/exec"
 
 # ========== БАЗА ЗНАНИЙ (консультант) ==========
 KNOWLEDGE = """
@@ -44,7 +44,7 @@ borisov.store — сервис по созданию сайтов на бесп�
 Исполнитель: Борисов Сергей, самозанятый.
 Мы создаем качественные и функциональные сайты. Чтобы попасть на наш сайт нажмите кнопку «Перейти на сайт» под этим сообщением.
 
-[ОСТАЛЬНОЙ ТЕКСТ KNOWLEDGE (полный из вашего файла 19.txt) ВСТАВЬТЕ СЮДА]
+[ОСТАЛЬНОЙ ТЕКСТ KNOWLEDGE ВСТАВЬТЕ ИЗ ВАШЕГО ФАЙЛА]
 """
 
 # ========== ЦЕНЫ (из MAX-бота) ==========
@@ -101,7 +101,6 @@ BUTTON_LINKS = {
     "📞 Контакты": "https://borisov.store/#contacts",
     "🛡 Проверка самозанятого": "https://npd.nalog.ru/check-status/",
     "⚙️ Технологии": SITE_URL,
-    "⚡ Преимущества": "https://borisov.store/#advantages",
 }
 
 # ========== ТРИГГЕРЫ ==========
@@ -508,14 +507,16 @@ async def handle_selfemployed(message: types.Message):
     )
     await message.answer(answer, reply_markup=inline_kb)
 
-@dp.message(F.text == "⚡ Преимущества")
-async def handle_advantages(message: types.Message):
+@dp.message(F.text == "🛠 Наши услуги")
+async def handle_services(message: types.Message):
     answer = (
-        "Наши преимущества помогут вам выделиться среди конкурентов и привлечь больше клиентов.\n\n"
-        "Подробно о них можно узнать, нажав кнопку «Перейти на сайт» — она откроет раздел «Почему выбирают нас»."
+        "Здравствуйте! Я — официальный представитель сервиса borisov.store.\n\n"
+        "Мы специализируемся на создании качественных и функциональных **сайтов** и **Telegram-ботов**.\n"
+        "Сайты размещаются на бесплатном хостинге GitHub Pages, боты работают 24/7.\n\n"
+        "Если вас интересуют наши услуги, вы можете узнать больше, нажав на кнопку «Перейти на сайт» под этим сообщением."
     )
     inline_kb = types.InlineKeyboardMarkup(
-        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/#advantages")]]
+        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url=SITE_URL)]]
     )
     await message.answer(answer, reply_markup=inline_kb)
 
@@ -524,7 +525,7 @@ async def handle_contacts(message: types.Message):
     answer = (
         "Свяжитесь с нами любым удобным способом:\n\n"
         "📧 Email: wisebor@gmail.com\n"
-        "📱 Telegram: @borisovsergey71\n"
+        "📞 Телефон: +79582319212\n"
         "🌐 Сайт: https://borisov.store"
     )
     await message.answer(answer)
@@ -607,4 +608,4 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main()) 
