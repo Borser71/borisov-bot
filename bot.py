@@ -180,8 +180,16 @@ async def start(message: types.Message, state: FSMContext):
 
 @dp.message(Command("cancel"))
 async def cancel(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    # Очищаем состояние
     await state.clear()
-    await message.answer("Действие отменено.", reply_markup=contact_kb)
+    # Удаляем пользователя из списка авторизованных (полный сброс)
+    authorized_users.discard(user_id)
+    # Показываем кнопку "Оставить контакт"
+    await message.answer(
+        "Действие отменено. Чтобы начать заново, нажмите «Оставить контакт».",
+        reply_markup=contact_kb
+    )
 
 # ===== СБОР КОНТАКТА =====
 @dp.message(F.text == "📝 Оставить контакт")
