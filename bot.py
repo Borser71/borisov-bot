@@ -145,8 +145,7 @@ main_kb = types.ReplyKeyboardMarkup(
         [types.KeyboardButton(text="🛠 Наши услуги"), types.KeyboardButton(text="🚚 Сроки и доставка")],
         [types.KeyboardButton(text="💳 Оплата"), types.KeyboardButton(text="↩️ Гарантии")],
         [types.KeyboardButton(text="📞 Контакты"), types.KeyboardButton(text="🛡 Проверка самозанятого")],
-        [types.KeyboardButton(text="⚙️ Технологии"), types.KeyboardButton(text="⚡ Преимущества")],
-        [types.KeyboardButton(text="📋 Цены")],   # Новая кнопка
+        [types.KeyboardButton(text="⚙️ Технологии"), types.KeyboardButton(text="📋 Цены")],
     ],
     resize_keyboard=True
 )
