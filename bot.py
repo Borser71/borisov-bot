@@ -20,7 +20,7 @@ SITE_URL = "https://borisov.store"
 PORT = int(os.getenv("PORT", 10000))
 
 # ========== ССЫЛКА НА APPS SCRIPT (НОВАЯ ТАБЛИЦА) ==========
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx1wT8Zo36a-hgk4T1ZgjF2H2IxGehutYrlLsk87THIl98x0apfSA_LtpkN_nFLapOSiw/exec"
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9EYYR8OyOnVRNOjYggiwg2K_vRrlGOM9qC-K7VmlyFTPNjcR54Ecnqvw_-lqP1-pE7w/exec"
 
 # ========== БАЗА ЗНАНИЙ ==========
 KNOWLEDGE = """
