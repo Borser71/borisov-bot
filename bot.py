@@ -23,6 +23,9 @@ PORT = int(os.getenv("PORT", 10000))
 YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID")
 YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY")
 
+# ===== ТВОЙ TELEGRAM ID (для уведомлений) =====
+ADMIN_CHAT_ID = 990317436
+
 # ========== НАСТРОЙКА ЮKASSA ==========
 if YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY:
     Configuration.account_id = YOOKASSA_SHOP_ID
@@ -32,7 +35,7 @@ else:
     print("ЮKassa не настроена (отсутствуют shopId или secretKey)")
 
 # ========== ССЫЛКА НА APPS SCRIPT (НОВАЯ ТАБЛИЦА) ==========
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwObzBGHaCjBi0J_fOO0tRyo6P50WyINg-P1eVCwKk1uKz5hoZ7XdC5RBmcQ0uSKpazFA/exec"
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzeaN4cYCw7emtUJoobYMRSibWPsVdLjLxD1cXGA2ODq3LJyfpEtCvK7kNesBQuzHUeCA/exec"
 
 # ========== БАЗА ЗНАНИЙ (консультант) ==========
 KNOWLEDGE = """
@@ -135,6 +138,7 @@ borisov.store — сервис по созданию сайтов и ботов 
 НАВИГАЦИЯ:
 Если клиент спрашивает о чём-то, чего нет в базе, предложи нажать «Перейти на сайт» для перехода в нужный раздел.
 """
+
 # ========== ЦЕНЫ (из MAX-бота) ==========
 SITE_NAMES = {
     "len": "Лендинг",
@@ -367,6 +371,15 @@ async def process_phone(message: types.Message, state: FSMContext):
     # Запись контакта в таблицу (order = "")
     await append_to_sheet(name, phone, username, "")
 
+    # ===== УВЕДОМЛЕНИЕ В TELEGRAM =====
+    await bot.send_message(
+        ADMIN_CHAT_ID,
+        f"🆕 Новый контакт!\n"
+        f"👤 Имя: {name}\n"
+        f"📞 Телефон: {phone}\n"
+        f"🆔 Ник: @{username}"
+    )
+
     # Авторизуем пользователя
     authorized_users.add(user_id)
     await state.clear()
@@ -504,6 +517,16 @@ async def confirm_order(message: types.Message, state: FSMContext):
             # Запись заказа в таблицу
             order_text = f"{services_text}, сумма {total} ₽"
             await append_to_sheet(name, phone, username, order_text)
+
+            # ===== УВЕДОМЛЕНИЕ В TELEGRAM =====
+            await bot.send_message(
+                ADMIN_CHAT_ID,
+                f"🆕 Новый заказ!\n"
+                f"👤 Имя: {name}\n"
+                f"📞 Телефон: {phone}\n"
+                f"📋 Заказ: {services_text}\n"
+                f"💰 Сумма: {total} ₽"
+            )
 
             # Отправляем клиенту сообщение с деталями (как в MAX-боте)
             await message.answer(
