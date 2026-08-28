@@ -139,7 +139,8 @@ borisov.store — сервис по созданию сайтов и ботов 
 Если клиент спрашивает о чём-то, чего нет в базе, предложи нажать «Перейти на сайт» для перехода в нужный раздел.
 """
 
-# ========== ЦЕНЫ (из MAX-бота) ==========
+# ========== ЦЕНЫ ==========
+# Для сайтов
 SITE_NAMES = {
     "len": "Лендинг",
     "info": "Информационный сайт",
@@ -171,18 +172,29 @@ SITE_ADDONS = {
     12: 4000,  # Google Таблица
     13: 4000   # календарь
 }
-BOT_ADDONS = {
-    1: 4000,   # Google Таблица
-    2: 4000,   # календарь
-    3: 4000    # автоплатеж
-}
 ADDON_NAMES = {
     1: "favicon", 2: "Форма обратной связи", 3: "Карта проезда",
     4: "Еще 6 товаров", 5: "Оферта", 6: "Политика конфиденциальности",
     7: "Блок отзывов", 8: "Яндекс-Метрика", 9: "Виджет звонка",
     10: "Еще 2 товара", 11: "Автоплатеж", 12: "Google Таблица", 13: "Календарь"
 }
-BOT_ADDON_NAMES = {1: "Google Таблица", 2: "Календарь", 3: "Автоплатеж"}
+
+# Три пакета Telegram-ботов (без доп. услуг)
+BOT_PACKAGES = {
+    "contact": {"name": "Бот для сбора контактов", "price": 8000},
+    "contact_consult": {"name": "Сбор контактов + консультант", "price": 12000},
+    "full": {"name": "Сбор контактов + консультант + оплата", "price": 20000}
+}
+BOT_PACKAGE_NAMES = {
+    "contact": "Бот для сбора контактов",
+    "contact_consult": "Сбор контактов + консультант",
+    "full": "Сбор контактов + консультант + оплата"
+}
+BOT_PACKAGE_PRICES = {
+    "contact": 8000,
+    "contact_consult": 12000,
+    "full": 20000
+}
 
 # ========== ССЫЛКИ ДЛЯ КНОПОК ==========
 BUTTON_LINKS = {
@@ -216,9 +228,11 @@ class ContactForm(StatesGroup):
     waiting_for_phone = State()
 
 class OrderForm(StatesGroup):
-    waiting_for_base_service = State()
-    waiting_for_addons = State()
-    waiting_for_confirmation = State()
+    waiting_for_type = State()           # выбор: сайт или бот
+    waiting_for_site_type = State()      # выбор типа сайта
+    waiting_for_addons = State()         # доп. услуги для сайта
+    waiting_for_bot_package = State()    # выбор пакета бота
+    waiting_for_confirmation = State()   # подтверждение
 
 # ========== БОТ И ДИСПЕТЧЕР ==========
 storage = MemoryStorage()
@@ -276,39 +290,24 @@ def create_payment(amount: float, description: str, return_url: str) -> str | No
             "amount": {"value": f"{amount:.2f}", "currency": "RUB"},
             "confirmation": {"type": "redirect", "return_url": return_url},
             "description": description,
-            "capture": True,            
+            "capture": True,
         }, idempotence_key)
         return payment.confirmation.confirmation_url
     except Exception as e:
         print(f"Ошибка создания платежа: {e}")
         return None
 
-# Функция расчёта суммы
-def calculate_total(service: str, site_type: str = None, addons: list = None) -> tuple:
-    total = 0.0
-    services_text = ""
+# Функция расчёта суммы для сайта (с доп. услугами)
+def calculate_site_total(site_type: str, addons: list = None) -> tuple:
+    total = SITE_PRICES.get(site_type, 0)
+    services_text = SITE_NAMES.get(site_type, "Сайт")
     if addons:
-        addons = list(set(addons))  # убираем дубли
-    if service == "site" and site_type:
-        total += SITE_PRICES.get(site_type, 0)
-        services_text = SITE_NAMES.get(site_type, "Сайт")
-        if addons:
-            addon_list = []
-            for a in addons:
-                total += SITE_ADDONS.get(a, 0)
-                addon_list.append(ADDON_NAMES.get(a, str(a)))
-            if addon_list:
-                services_text += " + " + ", ".join(addon_list)
-    elif service == "bot":
-        total += 12000
-        services_text = "Telegram-бот"
-        if addons:
-            addon_list = []
-            for a in addons:
-                total += BOT_ADDONS.get(a, 0)
-                addon_list.append(BOT_ADDON_NAMES.get(a, str(a)))
-            if addon_list:
-                services_text += " + " + ", ".join(addon_list)
+        addon_list = []
+        for a in addons:
+            total += SITE_ADDONS.get(a, 0)
+            addon_list.append(ADDON_NAMES.get(a, str(a)))
+        if addon_list:
+            services_text += " + " + ", ".join(addon_list)
     return int(total), services_text
 
 # ========== ОБРАБОТЧИКИ ==========
@@ -401,61 +400,85 @@ async def show_prices(message: types.Message, state: FSMContext):
         )
         return
 
-    # Проверяем, не находится ли пользователь уже в процессе заказа
     current_state = await state.get_state()
-    if current_state in [OrderForm.waiting_for_base_service.state, OrderForm.waiting_for_addons.state, OrderForm.waiting_for_confirmation.state]:
+    if current_state in [OrderForm.waiting_for_type.state, OrderForm.waiting_for_site_type.state,
+                         OrderForm.waiting_for_addons.state, OrderForm.waiting_for_bot_package.state,
+                         OrderForm.waiting_for_confirmation.state]:
         await message.answer("Вы уже в процессе оформления заказа. Чтобы отменить, отправьте /cancel.")
         return
 
-    text = (
-        "Выберите тип сайта или бота:\n\n"
-        "1) Лендинг — 8 000 ₽\n"
-        "2) Информационный сайт — 12 000 ₽\n"
-        "3) Визитка — 16 000 ₽\n"
-        "4) Портфолио — 20 000 ₽\n"
-        "5) Интернет-магазин — 24 000 ₽\n"
-        "6) Универсальный сайт — 40 000 ₽\n"
-        "7) Telegram-бот — 12 000 ₽\n\n"
-        "Напишите номер (1-7) или название услуги (например, 'лендинг')."
+    # Спрашиваем: сайт или бот?
+    await state.set_state(OrderForm.waiting_for_type)
+    type_kb = types.ReplyKeyboardMarkup(
+        keyboard=[
+            [types.KeyboardButton(text="🌐 Сайт")],
+            [types.KeyboardButton(text="🤖 Telegram-бот")]
+        ],
+        resize_keyboard=True
     )
-    await state.set_state(OrderForm.waiting_for_base_service)
-    await message.answer(text)
+    await message.answer(
+        "Что вы хотите заказать — сайт или Telegram-бота?",
+        reply_markup=type_kb
+    )
 
-# ===== ВЫБОР БАЗОВОЙ УСЛУГИ =====
-@dp.message(OrderForm.waiting_for_base_service)
-async def process_base_service(message: types.Message, state: FSMContext):
+# ===== ВЫБОР: САЙТ ИЛИ БОТ =====
+@dp.message(OrderForm.waiting_for_type)
+async def process_type(message: types.Message, state: FSMContext):
+    if message.text == "🌐 Сайт":
+        # Показываем список сайтов
+        text = (
+            "Выберите тип сайта:\n\n"
+            "1) Лендинг — 8 000 ₽\n"
+            "2) Информационный сайт — 12 000 ₽\n"
+            "3) Визитка — 16 000 ₽\n"
+            "4) Портфолио — 20 000 ₽\n"
+            "5) Интернет-магазин — 24 000 ₽\n"
+            "6) Универсальный сайт — 40 000 ₽\n\n"
+            "Напишите номер (1-6) или название услуги."
+        )
+        await state.set_state(OrderForm.waiting_for_site_type)
+        await message.answer(text, reply_markup=main_kb)  # возвращаем обычную клавиатуру
+    elif message.text == "🤖 Telegram-бот":
+        # Показываем 3 пакета ботов
+        text = (
+            "Выберите пакет Telegram-бота:\n\n"
+            "1) Бот для сбора контактов — 8 000 ₽\n"
+            "2) Сбор контактов + консультант — 12 000 ₽\n"
+            "3) Сбор контактов + консультант + оплата — 20 000 ₽\n\n"
+            "Напишите номер (1-3)."
+        )
+        await state.set_state(OrderForm.waiting_for_bot_package)
+        await message.answer(text, reply_markup=main_kb)
+    else:
+        await message.answer("Пожалуйста, выберите «Сайт» или «Telegram-бот» с помощью кнопок.")
+
+# ===== ВЫБОР ТИПА САЙТА =====
+@dp.message(OrderForm.waiting_for_site_type)
+async def process_site_type(message: types.Message, state: FSMContext):
     text = message.text.strip().lower()
     mapping = {
-        "1": "len", "2": "info", "3": "vizit", "4": "portfolio", "5": "shop", "6": "universal", "7": "bot",
+        "1": "len", "2": "info", "3": "vizit", "4": "portfolio", "5": "shop", "6": "universal",
         "лендинг": "len", "информационный": "info", "визитка": "vizit", "портфолио": "portfolio",
-        "интернет-магазин": "shop", "универсальный": "universal", "telegram-бот": "bot"
+        "интернет-магазин": "shop", "универсальный": "universal"
     }
     site_type = mapping.get(text)
     if not site_type:
-        await message.answer("Не понял. Пожалуйста, выберите номер от 1 до 7 или название услуги.")
+        await message.answer("Не понял. Пожалуйста, выберите номер от 1 до 6 или название услуги.")
         return
 
-    service = "bot" if site_type == "bot" else "site"
-    await state.update_data(service=service, site_type=site_type)
+    await state.update_data(service="site", site_type=site_type)
 
-    # Показываем дополнительные услуги
-    if service == "site":
-        addon_text = "Теперь выберите дополнительные услуги (если нужны).\nВот список для сайта:\n"
-        for k, v in ADDON_NAMES.items():
-            price = SITE_ADDONS.get(k, 0)
-            addon_text += f"{k}) {v} — {price} ₽\n"
-        addon_text += "Напишите номера через запятую (например: 1,3,5) или отправьте 'нет'."
-    else:
-        addon_text = "Теперь выберите дополнительные услуги (если нужны).\nВот список для бота:\n"
-        for k, v in BOT_ADDON_NAMES.items():
-            price = BOT_ADDONS.get(k, 0)
-            addon_text += f"{k}) {v} — {price} ₽\n"
-        addon_text += "Напишите номера через запятую (например: 1,2) или отправьте 'нет'."
+    # Показываем доп. услуги
+    addon_text = "Теперь выберите дополнительные услуги (если нужны).\nВот список:\n"
+    for k, v in ADDON_NAMES.items():
+        price = SITE_ADDONS.get(k, 0)
+        addon_text += f"{k}) {v} — {price} ₽\n"
+    addon_text += "Напишите номера через запятую (например: 1,3,5) или отправьте 'нет'."
 
     await state.set_state(OrderForm.waiting_for_addons)
     await message.answer(addon_text)
 
-# ===== ВЫБОР ДОПОЛНИТЕЛЬНЫХ УСЛУГ =====
+# ===== ВЫБОР ДОП. УСЛУГ ДЛЯ САЙТА =====
 @dp.message(OrderForm.waiting_for_addons)
 async def process_addons(message: types.Message, state: FSMContext):
     text = message.text.strip()
@@ -467,33 +490,45 @@ async def process_addons(message: types.Message, state: FSMContext):
         for p in parts:
             try:
                 num = int(p)
-                addons.append(num)
+                if num in SITE_ADDONS:
+                    addons.append(num)
             except ValueError:
                 pass
-        data = await state.get_data()
-        service = data.get("service")
-        valid = SITE_ADDONS.keys() if service == "site" else BOT_ADDONS.keys()
-        addons = [a for a in addons if a in valid]
         if not addons and text.lower() != "нет":
             await message.answer("Я не нашёл подходящих номеров. Попробуйте снова или напишите 'нет'.")
             return
 
-    await state.update_data(addons=addons)
-
-    # Расчёт суммы
     data = await state.get_data()
-    service = data.get("service")
     site_type = data.get("site_type")
-    total, services_text = calculate_total(service, site_type, addons)
+    total, services_text = calculate_site_total(site_type, addons)
 
     await state.update_data(total=total, services_text=services_text)
-
     await state.set_state(OrderForm.waiting_for_confirmation)
     await message.answer(
-        f"Ваш заказ:\n"
-        f"📦 {services_text}\n"
-        f"💰 Итоговая сумма: {total} ₽\n\n"
-        f"Вы согласны с заказом? (да/нет)"
+        f"Ваш заказ:\n📦 {services_text}\n💰 Итоговая сумма: {total} ₽\n\nВы согласны с заказом? (да/нет)"
+    )
+
+# ===== ВЫБОР ПАКЕТА БОТА =====
+@dp.message(OrderForm.waiting_for_bot_package)
+async def process_bot_package(message: types.Message, state: FSMContext):
+    text = message.text.strip()
+    mapping = {
+        "1": "contact",
+        "2": "contact_consult",
+        "3": "full"
+    }
+    package_key = mapping.get(text)
+    if not package_key:
+        await message.answer("Пожалуйста, выберите номер от 1 до 3.")
+        return
+
+    total = BOT_PACKAGE_PRICES.get(package_key, 0)
+    services_text = BOT_PACKAGE_NAMES.get(package_key, "Бот")
+
+    await state.update_data(total=total, services_text=services_text)
+    await state.set_state(OrderForm.waiting_for_confirmation)
+    await message.answer(
+        f"Ваш заказ:\n📦 {services_text}\n💰 Итоговая сумма: {total} ₽\n\nВы согласны с заказом? (да/нет)"
     )
 
 # ===== ПОДТВЕРЖДЕНИЕ ЗАКАЗА =====
@@ -509,16 +544,13 @@ async def confirm_order(message: types.Message, state: FSMContext):
         services_text = data.get("services_text", "Без описания")
         total = data.get("total", 0)
 
-        # Обрезаем описание до 100 символов (чтобы гарантированно уложиться в 128)
         short_description = services_text[:100] + "..." if len(services_text) > 100 else services_text
         payment_url = create_payment(total, f"Заказ: {short_description}", "https://borisov.store/thank-you")
 
         if payment_url:
-            # Запись заказа в таблицу
             order_text = f"{services_text}, сумма {total} ₽"
             await append_to_sheet(name, phone, username, order_text)
 
-            # ===== УВЕДОМЛЕНИЕ В TELEGRAM =====
             await bot.send_message(
                 ADMIN_CHAT_ID,
                 f"🆕 Новый заказ!\n"
@@ -528,7 +560,6 @@ async def confirm_order(message: types.Message, state: FSMContext):
                 f"💰 Сумма: {total} ₽"
             )
 
-            # Отправляем клиенту сообщение с деталями (как в MAX-боте)
             await message.answer(
                 f"✅ Ваш заказ принят!\n\n"
                 f"👤 Имя: {name}\n"
@@ -541,7 +572,6 @@ async def confirm_order(message: types.Message, state: FSMContext):
             await message.answer(
                 "Извините, не удалось создать платёж. Попробуйте позже или свяжитесь с нами через контакты на сайте."
             )
-
         await state.clear()
 
     elif message.text.lower() == "нет":
@@ -557,7 +587,7 @@ async def confirm_order(message: types.Message, state: FSMContext):
 @dp.message(F.text == "⚙️ Технологии")
 async def handle_tech(message: types.Message):
     answer = (
-        "🛠 <b>Наши технологии</b>\n\n"
+        "🛠 <b>Технологии для сайта</b>\n\n"
         "🔹 <b>HTML5</b> — структура и разметка. Семантическая вёрстка, адаптивность, корректное отображение в любых браузерах.\n\n"
         "🔹 <b>CSS3</b> — дизайн и стили. Современный внешний вид, анимации, идеальная раскладка на всех устройствах.\n\n"
         "🔹 <b>JavaScript</b> — интерактивность и поведение. Умные формы, плавные переходы, динамический контент без перезагрузки.\n\n"
@@ -658,7 +688,9 @@ async def handle_question(message: types.Message, state: FSMContext):
 
     # Проверка, не находится ли пользователь в процессе заказа
     current_state = await state.get_state()
-    if current_state in [OrderForm.waiting_for_base_service.state, OrderForm.waiting_for_addons.state, OrderForm.waiting_for_confirmation.state]:
+    if current_state in [OrderForm.waiting_for_type.state, OrderForm.waiting_for_site_type.state,
+                         OrderForm.waiting_for_addons.state, OrderForm.waiting_for_bot_package.state,
+                         OrderForm.waiting_for_confirmation.state]:
         await message.answer("Вы в процессе оформления заказа. Чтобы отменить, отправьте /cancel.")
         return
 
