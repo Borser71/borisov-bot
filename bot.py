@@ -545,7 +545,9 @@ async def confirm_order(message: types.Message, state: FSMContext):
         total = data.get("total", 0)
 
         short_description = services_text[:100] + "..." if len(services_text) > 100 else services_text
-        payment_url = create_payment(total, f"Заказ: {short_description}", "https://borisov.store/thank-you")
+        # ===== ИЗМЕНЕНИЕ: сумма предоплаты 50% =====
+        prepayment = int(total * 0.5)  # сумма для платежа
+        payment_url = create_payment(prepayment, f"Заказ: {short_description}", "https://borisov.store/thank-you")
 
         if payment_url:
             order_text = f"{services_text}, сумма {total} ₽"
@@ -557,15 +559,19 @@ async def confirm_order(message: types.Message, state: FSMContext):
                 f"👤 Имя: {name}\n"
                 f"📞 Телефон: {phone}\n"
                 f"📋 Заказ: {services_text}\n"
-                f"💰 Сумма: {total} ₽"
+                f"💰 Полная сумма: {total} ₽\n"
+                f"💳 Предоплата 50%: {prepayment} ₽"
             )
 
+            # ===== ИЗМЕНЕНИЕ: текст клиенту с указанием предоплаты =====
             await message.answer(
                 f"✅ Ваш заказ принят!\n\n"
                 f"👤 Имя: {name}\n"
                 f"📋 Состав заказа: {services_text}\n"
-                f"💰 Сумма: {total} ₽\n\n"
-                f"🔗 Оплатите по ссылке:\n{payment_url}\n\n"
+                f"💰 Полная сумма: {total} ₽\n"
+                f"💳 Предоплата (50%): {prepayment} ₽\n\n"
+                f"🔗 Оплатите предоплату по ссылке:\n{payment_url}\n\n"
+                "Оставшиеся 50% вы оплатите после завершения работы.\n"
                 "После оплаты мы начнём работу над вашим заказом."
             )
         else:
