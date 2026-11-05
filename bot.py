@@ -821,7 +821,7 @@ async def handle_question(message: types.Message, state: FSMContext):
                 {"role": "user", "content": user_text},
             ],
             temperature=0.3,
-            max_tokens=400,
+            max_tokens=600,
         )
         answer = response.choices[0].message.content.strip()
         answer = answer.replace("<button>", "").replace("</button>", "")
