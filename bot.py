@@ -2,6 +2,7 @@ import os
 import asyncio
 import aiohttp
 import uuid
+import zoneinfo
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart, Command
@@ -304,7 +305,10 @@ user_contacts = {}  # user_id -> {"name": ..., "phone": ...}
 
 # Функция записи в таблицу
 async def append_to_sheet(name: str, phone: str, username: str, order: str = ""):
-    now = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    # Устанавливаем часовой пояс Екатеринбурга (UTC+5)
+    ekb_tz = zoneinfo.ZoneInfo("Asia/Yekaterinburg")
+    now = datetime.now(ekb_tz).strftime("%d.%m.%Y %H:%M:%S")
+    
     payload = {
         "timestamp": now,
         "name": name,
