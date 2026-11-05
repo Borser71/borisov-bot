@@ -755,14 +755,19 @@ async def handle_selfemployed(message: types.Message):
 async def handle_services(message: types.Message):
     answer = (
         "Здравствуйте! Я — официальный представитель сервиса borisov.store.\n\n"
-        "Мы специализируемся на создании качественных и функциональных **сайтов** и **Telegram-ботов**.\n"
-        "Сайты размещаются на бесплатном хостинге GitHub Pages, боты работают 24/7.\n\n"
-        "Если вас интересуют наши услуги, вы можете узнать больше, нажав на кнопку «Перейти на сайт» под этим сообщением."
+        "Мы специализируемся на создании качественных и функциональных:\n"
+        "🌐 <b>Сайтов</b> (от лендинга до интернет-магазина)\n"
+        "🤖 <b>Telegram-ботов</b> (от сбора контактов до оплаты)\n"
+        "🟣 <b>MAX-ботов</b> (инновационные решения для мессенджера MAX)\n"
+        "🧠 <b>AI-агентов</b> (умный консультант прямо на вашем сайте)\n\n"
+        "Сайты размещаются на бесплатном хостинге, а боты работают 24/7.\n\n"
+        "Если вас интересуют наши услуги, вы можете узнать больше, нажав на кнопку «Перейти на сайт»."
     )
+    # Ссылка ведет на раздел услуг (где находится портфолио)
     inline_kb = types.InlineKeyboardMarkup(
-        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url=SITE_URL)]]
+        inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url="https://borisov.store/#services")]]
     )
-    await message.answer(answer, reply_markup=inline_kb)
+    await message.answer(answer, reply_markup=inline_kb, parse_mode="HTML")
 
 @dp.message(F.text == "📞 Контакты")
 async def handle_contacts(message: types.Message):
