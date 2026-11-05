@@ -784,11 +784,11 @@ async def handle_question(message: types.Message, state: FSMContext):
         )
         return
 
-    # Проверка, не находится ли пользователь в процессе заказа
+        # Проверка, не находится ли пользователь в процессе заказа
     current_state = await state.get_state()
     if current_state in [OrderForm.waiting_for_type.state, OrderForm.waiting_for_site_type.state,
                          OrderForm.waiting_for_addons.state, OrderForm.waiting_for_bot_package.state,
-                         OrderForm.waiting_for_confirmation.state]:
+                         OrderForm.waiting_for_confirmation.state, OrderForm.waiting_for_offer.state]:
         await message.answer("Вы в процессе оформления заказа. Чтобы отменить, отправьте /cancel.")
         return
 
