@@ -230,11 +230,12 @@ class ContactForm(StatesGroup):
     waiting_for_phone = State()
 
 class OrderForm(StatesGroup):
-    waiting_for_type = State()           # выбор: сайт или бот
+    waiting_for_type = State()           # выбор: сайт, тг-бот, макс-бот или ии-агент
     waiting_for_site_type = State()      # выбор типа сайта
     waiting_for_addons = State()         # доп. услуги для сайта
     waiting_for_bot_package = State()    # выбор пакета бота
-    waiting_for_confirmation = State()   # подтверждение
+    waiting_for_confirmation = State()   # подтверждение суммы
+    waiting_for_offer = State()          # ожидание подтверждения оферты
 
 # ========== БОТ И ДИСПЕТЧЕР ==========
 storage = MemoryStorage()
@@ -405,21 +406,23 @@ async def show_prices(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state in [OrderForm.waiting_for_type.state, OrderForm.waiting_for_site_type.state,
                          OrderForm.waiting_for_addons.state, OrderForm.waiting_for_bot_package.state,
-                         OrderForm.waiting_for_confirmation.state]:
+                         OrderForm.waiting_for_confirmation.state, OrderForm.waiting_for_offer.state]:
         await message.answer("Вы уже в процессе оформления заказа. Чтобы отменить, отправьте /cancel.")
         return
 
-    # Спрашиваем: сайт или бот?
+    # Спрашиваем: что хотим заказать?
     await state.set_state(OrderForm.waiting_for_type)
     type_kb = types.ReplyKeyboardMarkup(
         keyboard=[
             [types.KeyboardButton(text="🌐 Сайт")],
-            [types.KeyboardButton(text="🤖 Telegram-бот")]
+            [types.KeyboardButton(text="🤖 Telegram-бот")],
+            [types.KeyboardButton(text="🟣 MAX-бот")],
+            [types.KeyboardButton(text="🧠 AI-агент")]
         ],
         resize_keyboard=True
     )
     await message.answer(
-        "Что вы хотите заказать — сайт или Telegram-бота?",
+        "Что вы хотите заказать?",
         reply_markup=type_kb
     )
 
@@ -427,7 +430,6 @@ async def show_prices(message: types.Message, state: FSMContext):
 @dp.message(OrderForm.waiting_for_type)
 async def process_type(message: types.Message, state: FSMContext):
     if message.text == "🌐 Сайт":
-        # Показываем список сайтов
         text = (
             "Выберите тип сайта:\n\n"
             "1) Лендинг — 6 400 ₽\n"
@@ -439,21 +441,49 @@ async def process_type(message: types.Message, state: FSMContext):
             "Напишите номер (1-6) или название услуги."
         )
         await state.set_state(OrderForm.waiting_for_site_type)
-        await message.answer(text, reply_markup=main_kb)  # возвращаем обычную клавиатуру
+        await message.answer(text, reply_markup=main_kb)
+        
     elif message.text == "🤖 Telegram-бот":
-        # Показываем 3 пакета ботов
         text = (
             "Выберите пакет Telegram-бота:\n\n"
-            "1) Бот для сбора контактов — 6 400 ₽\n"
-            "2) Сбор контактов и бот-консультант — 9 600 ₽\n"
-            "3) Бот: сбор контактов, консультант, оплата  — 16 000 ₽\n\n"
+            "1) Бот для сбора контактов — 6 400 ₽ (ТГ). Работает без ИИ.\n"
+            "2) Сбор контактов и бот-консультант — 9 600 ₽ (ТГ). Работает с ИИ.\n"
+            "3) Бот: сбор контактов, консультант, оплата — 16 000 ₽ (ТГ). Работает с ИИ.\n\n"
             "Напишите номер (1-3)."
         )
         await state.set_state(OrderForm.waiting_for_bot_package)
+        await state.update_data(bot_platform="telegram") # Запоминаем, что это ТГ
         await message.answer(text, reply_markup=main_kb)
+        
+    elif message.text == "🟣 MAX-бот":
+        text = (
+            "Выберите пакет MAX-бота:\n\n"
+            "1) Бот для сбора контактов — 8 000 ₽ (MAX). Работает без ИИ.\n"
+            "2) Сбор контактов и бот-консультант — 16 000 ₽ (MAX). Работает с ИИ.\n"
+            "3) Бот: сбор контактов, консультант, оплата — 24 000 ₽ (MAX). Работает с ИИ.\n\n"
+            "Напишите номер (1-3)."
+        )
+        await state.set_state(OrderForm.waiting_for_bot_package)
+        await state.update_data(bot_platform="max") # Запоминаем, что это MAX
+        await message.answer(text, reply_markup=main_kb)
+        
+    elif message.text == "🧠 AI-агент":
+        text = (
+            "AI-агент — это умный консультант 24/7 на вашем сайте.\n\n"
+            "Один пакет. Стоимость: 16 000 ₽ (AI). Работает с ИИ.\n\n"
+            "Вы согласны с этим выбором? (да/нет)"
+        )
+        # Сразу переводим на подтверждение суммы
+        await state.update_data(
+            total=16000, 
+            services_text="AI-агент на сайт (консультант 24/7)"
+        )
+        await state.set_state(OrderForm.waiting_for_confirmation)
+        await message.answer(text, reply_markup=main_kb)
+        
     else:
-        await message.answer("Пожалуйста, выберите «Сайт» или «Telegram-бот» с помощью кнопок.")
-
+        await message.answer("Пожалуйста, выберите вариант с помощью кнопок.")
+        
 # ===== ВЫБОР ТИПА САЙТА =====
 @dp.message(OrderForm.waiting_for_site_type)
 async def process_site_type(message: types.Message, state: FSMContext):
