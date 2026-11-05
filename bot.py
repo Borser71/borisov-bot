@@ -788,7 +788,7 @@ async def handle_question(message: types.Message, state: FSMContext):
         )
         return
 
-        # Проверка, не находится ли пользователь в процессе заказа
+    # Проверка, не находится ли пользователь в процессе заказа
     current_state = await state.get_state()
     if current_state in [OrderForm.waiting_for_type.state, OrderForm.waiting_for_site_type.state,
                          OrderForm.waiting_for_addons.state, OrderForm.waiting_for_bot_package.state,
@@ -807,7 +807,12 @@ async def handle_question(message: types.Message, state: FSMContext):
         response = await client.chat.completions.create(
             model="google/gemini-2.5-flash-lite",
             messages=[
-                {"role": "system", "content": f"{KNOWLEDGE}\n\nОтвечай без прямых ссылок. Ссылки могут быть только на кнопке «Перейти на сайт»."},
+                {"role": "system", "content": f"{KNOWLEDGE}\n\n"
+                 "Отвечай без прямых ссылок. Ссылки могут быть только на кнопке «Перейти на сайт». "
+                 "Если клиент спрашивает «Ты кто?», «Кто ты?», «Расскажи о себе» или «Что вы делаете?», "
+                 "обязательно представься как консультант Borisov Store и перечисли ВСЕ наши услуги: "
+                 "сайты, Telegram-боты, MAX-боты и AI-агенты. "
+                 "Для выделения важных слов используй HTML-теги <b> и </b> (например: <b>сайты</b>)."},
                 {"role": "user", "content": user_text},
             ],
             temperature=0.3,
@@ -827,7 +832,7 @@ async def handle_question(message: types.Message, state: FSMContext):
     inline_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url=target_url)]]
     )
-    await message.answer(answer, reply_markup=inline_kb)
+    await message.answer(answer, reply_markup=inline_kb, parse_mode="HTML") # <-- ВОТ ЗДЕСЬ ДОБАВЛЕН parse_mode
 
 # ========== HTTP-СЕРВЕР ДЛЯ RENDER ==========
 async def handle(request):
