@@ -544,18 +544,32 @@ async def process_addons(message: types.Message, state: FSMContext):
 @dp.message(OrderForm.waiting_for_bot_package)
 async def process_bot_package(message: types.Message, state: FSMContext):
     text = message.text.strip()
-    mapping = {
-        "1": "contact",
-        "2": "contact_consult",
-        "3": "full"
-    }
+    mapping = {"1": "contact", "2": "contact_consult", "3": "full"}
     package_key = mapping.get(text)
     if not package_key:
         await message.answer("Пожалуйста, выберите номер от 1 до 3.")
         return
 
-    total = BOT_PACKAGE_PRICES.get(package_key, 0)
-    services_text = BOT_PACKAGE_NAMES.get(package_key, "Бот")
+    data = await state.get_data()
+    platform = data.get("bot_platform", "telegram") # по умолчанию ТГ
+
+    if platform == "max":
+        prices = {"contact": 8000, "contact_consult": 16000, "full": 24000}
+        names = {
+            "contact": "MAX-бот: сбор контактов (MAX)",
+            "contact_consult": "MAX-бот: сбор контактов, консультант (MAX)",
+            "full": "MAX-бот: сбор контактов, консультант, оплата (MAX)"
+        }
+    else:
+        prices = {"contact": 6400, "contact_consult": 9600, "full": 16000}
+        names = {
+            "contact": "Telegram-бот: сбор контактов (ТГ)",
+            "contact_consult": "Telegram-бот: сбор контактов, консультант (ТГ)",
+            "full": "Telegram-бот: сбор контактов, консультант, оплата (ТГ)"
+        }
+
+    total = prices.get(package_key, 0)
+    services_text = names.get(package_key, "Бот")
 
     await state.update_data(total=total, services_text=services_text)
     await state.set_state(OrderForm.waiting_for_confirmation)
