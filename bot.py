@@ -207,9 +207,9 @@ BOT_PACKAGES = {
     "full": {"name": "Бот: сбор контактов, консультант, оплата", "price": 16000}
 }
 BOT_PACKAGE_NAMES = {
-    "contact": "Бот для сбора контактов",
-    "contact_consult": "Сбор контактов и бот-консультант",
-    "full": "Бот: сбор контактов, консультант, оплата"
+    "contact": "Бот для сбора контактов (ТГ)",
+    "contact_consult": "Сбор контактов и бот-консультант (ТГ)",
+    "full": "Бот: сбор контактов, консультант, оплата (ТГ)"
 }
 BOT_PACKAGE_PRICES = {
     "contact": 6400,
@@ -223,9 +223,9 @@ MAX_PACKAGES = {
     "full": {"name": "MAX-бот: сбор контактов, консультант, оплата", "price": 24000}
 }
 MAX_PACKAGE_NAMES = {
-    "contact": "MAX-бот: сбор контактов (MAX)",
-    "contact_consult": "MAX-бот: сбор контактов, консультант (MAX)",
-    "full": "MAX-бот: сбор контактов, консультант, оплата (MAX)"
+    "contact": "Бот для сбора контактов (MAX)",
+    "contact_consult": "Сбор контактов и бот-консультант (MAX)",
+    "full": "Бот: сбор контактов, консультант, оплата (MAX)"
 }
 MAX_PACKAGE_PRICES = {
     "contact": 8000,
@@ -512,7 +512,7 @@ async def process_type(message: types.Message, state: FSMContext):
     elif message.text == "🧠 AI-агент":
         text = (
             "AI-агент — это умный консультант 24/7 на вашем сайте.\n\n"
-            "Один пакет. Стоимость: 16 000 ₽ (AI). Работает с ИИ.\n\n"
+            "Один пакет. Стоимость: 16 000 ₽. Работает с ИИ.\n\n"
             "Вы согласны с этим выбором? (да/нет)"
         )
         # Сразу переводим на подтверждение суммы
@@ -689,12 +689,12 @@ async def confirm_order(message: types.Message, state: FSMContext):
 @dp.message(F.text == "⚙️ Технологии")
 async def handle_tech(message: types.Message):
     answer = (
-        "🛠 <b>Технологии для сайта</b>\n\n"
-        "🔹 <b>HTML5</b> — структура и разметка. Семантическая вёрстка, адаптивность, корректное отображение в любых браузерах.\n\n"
-        "🔹 <b>CSS3</b> — дизайн и стили. Современный внешний вид, анимации, идеальная раскладка на всех устройствах.\n\n"
-        "🔹 <b>JavaScript</b> — интерактивность и поведение. Умные формы, плавные переходы, динамический контент без перезагрузки.\n\n"
-        "📊 <b>Мини-CRM на Google Таблицах</b> — все заявки попадают в таблицу и дублируются вам на почту. Без лимитов.\n\n"
-        "💳 <b>Приём платежей через ЮKassa</b> — автоматическая, безопасная и надёжная оплата через СБП и карты."
+        "🛠 <b>Технологии, которые мы используем:</b>\n\n"
+        "🌐 <b>Для сайтов:</b> HTML5, CSS3, JavaScript, Мини-CRM (Google Таблицы), ЮKassa.\n\n"
+        "🤖 <b>Для Telegram-ботов:</b> Python 3, aiogram 3.x, OpenRouter, Amvera/Render.\n\n"
+        "🟣 <b>Для MAX-ботов:</b> Python 3, maxapi, OpenRouter, YooKassa, Amvera.\n\n"
+        "🧠 <b>Для AI-агентов:</b> Python 3, FastAPI, OpenRouter, Amvera/Render.\n\n"
+        "Подробнее о технологиях — на нашем сайте."
     )
     inline_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[[types.InlineKeyboardButton(text="Перейти на сайт", url=SITE_URL)]]
