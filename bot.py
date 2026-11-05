@@ -120,19 +120,22 @@ borisov.store — сервис по созданию сайтов и ботов 
 • История изменений и откат к любой версии
 
 ТЕХНОЛОГИИ ДЛЯ MAX-БОТОВ:
-Боты для мессенджера MAX работают на современных инструментах:
-• Python 3, библиотека maxapi (для работы с API MAX)
-• OpenAI / OpenRouter API (для умного консультирования)
-• YooKassa (приём платежей)
-• Amvera (российский хостинг для работы 24/7)
+• Python 3 — основной язык.
+• maxapi — библиотека для работы с API MAX.
+• OpenAI / OpenRouter API — для умного консультирования.
+• YooKassa — для приёма платежей.
+• Amvera — российский хостинг для работы 24/7.
 
-ЦЕНЫ НА БОТОВ:
-- Telegram-бот: от 6 400 ₽ (сбор контактов), 9 600 ₽ (с консультантом), 16 000 ₽ (с оплатой).
-- MAX-бот: от 8 000 ₽ (сбор контактов), 16 000 ₽ (с консультантом), 24 000 ₽ (с оплатой).
+ТЕХНОЛОГИИ ДЛЯ AI-АГЕНТА НА САЙТ:
+• Python 3 — основной язык.
+• FastAPI — веб-фреймворк для обработки запросов с сайта.
+• OpenAI / OpenRouter API — для общения с клиентами 24/7.
+• Amvera / Render — хостинг.
 
-AI-АГЕНТ НА САЙТ:
-Если клиенту нужен умный консультант прямо на его сайте, мы предлагаем AI-агента. 
-Стоимость: 16 000 ₽. Работает на FastAPI, подключается к OpenRouter. Круглосуточно консультирует клиентов на сайте и переводит их к оформлению заказа.
+ЦЕНЫ НА БОТОВ И АГЕНТОВ:
+- Telegram-бот: 6 400 ₽ (сбор контактов), 9 600 ₽ (с консультантом), 16 000 ₽ (с оплатой).
+- MAX-бот: 8 000 ₽ (сбор контактов), 16 000 ₽ (с консультантом), 24 000 ₽ (с оплатой).
+- AI-агент на сайт: 16 000 ₽.
 
 ПОРЯДОК РАБОТЫ И ОПЛАТА:
 - Клиент выбирает тариф или согласовывает индивидуальный заказ.
@@ -586,25 +589,14 @@ async def process_bot_package(message: types.Message, state: FSMContext):
         return
 
     data = await state.get_data()
-    platform = data.get("bot_platform", "telegram") # по умолчанию ТГ
+    platform = data.get("bot_platform", "telegram")
 
     if platform == "max":
-        prices = {"contact": 8000, "contact_consult": 16000, "full": 24000}
-        names = {
-            "contact": "MAX-бот: сбор контактов (MAX)",
-            "contact_consult": "MAX-бот: сбор контактов, консультант (MAX)",
-            "full": "MAX-бот: сбор контактов, консультант, оплата (MAX)"
-        }
+        total = MAX_PACKAGE_PRICES.get(package_key, 0)
+        services_text = MAX_PACKAGE_NAMES.get(package_key, "MAX-бот")
     else:
-        prices = {"contact": 6400, "contact_consult": 9600, "full": 16000}
-        names = {
-            "contact": "Telegram-бот: сбор контактов (ТГ)",
-            "contact_consult": "Telegram-бот: сбор контактов, консультант (ТГ)",
-            "full": "Telegram-бот: сбор контактов, консультант, оплата (ТГ)"
-        }
-
-    total = prices.get(package_key, 0)
-    services_text = names.get(package_key, "Бот")
+        total = BOT_PACKAGE_PRICES.get(package_key, 0)
+        services_text = BOT_PACKAGE_NAMES.get(package_key, "Telegram-бот")
 
     await state.update_data(total=total, services_text=services_text)
     await state.set_state(OrderForm.waiting_for_confirmation)
