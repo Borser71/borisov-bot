@@ -580,8 +580,35 @@ async def process_bot_package(message: types.Message, state: FSMContext):
 # ===== ПОДТВЕРЖДЕНИЕ ЗАКАЗА =====
 @dp.message(OrderForm.waiting_for_confirmation)
 async def confirm_order(message: types.Message, state: FSMContext):
-    if message.text.lower() == "да":
-        data = await state.get_data()
+    data = await state.get_data()
+    offer_confirmed = data.get("offer_confirmed", False)
+
+    # Если клиент еще НЕ подтвердил оферту
+    if not offer_confirmed:
+        if message.text.lower() == "да":
+            # Запоминаем, что сумму он подтвердил, но оферту еще нет
+            await state.update_data(offer_confirmed=True)
+            # Показываем оферту, НО НЕ СОЗДАЕМ ПЛАТЕЖ
+            await message.answer(
+                "Отлично! Перед оформлением заказа прошу вас ознакомиться с договором публичной оферты:\n"
+                "https://borisov.store/offer/\n\n"
+                "В ней прописаны все условия заказа, оплаты, а также пункт 5.3 (сдача и приемка).\n"
+                "Подтвердите, пожалуйста, что вы ознакомились с офертой (напишите «да»)."
+            )
+            return
+        elif message.text.lower() == "нет":
+            await state.clear()
+            await message.answer(
+                "Хорошо, возвращаемся к выбору. Нажмите «Цены», чтобы начать заново.",
+                reply_markup=main_kb
+            )
+            return
+        else:
+            await message.answer("Пожалуйста, ответьте «да» или «нет».")
+            return
+
+    # Если клиент уже подтвердил оферту (пишет "да" второй раз)
+    if message.text.lower() in ["да", "согласен", "ок", "подтверждаю"]:
         user_id = message.from_user.id
         username = message.from_user.username or "без username"
         contact = user_contacts.get(user_id, {})
@@ -591,14 +618,14 @@ async def confirm_order(message: types.Message, state: FSMContext):
         total = data.get("total", 0)
 
         short_description = services_text[:100] + "..." if len(services_text) > 100 else services_text
-        # ===== ИЗМЕНЕНИЕ: сумма предоплаты 50% =====
-        prepayment = int(total * 0.5)  # сумма для платежа
+        prepayment = int(total * 0.5)
         payment_url = create_payment(prepayment, f"Заказ: {short_description}", "https://borisov.store/thank-you")
 
         if payment_url:
             order_text = f"{services_text}, сумма {total} ₽"
             await append_to_sheet(name, phone, username, order_text)
 
+            # Уведомление тебе в ТГ
             await bot.send_message(
                 ADMIN_CHAT_ID,
                 f"🆕 Новый заказ!\n"
@@ -609,7 +636,7 @@ async def confirm_order(message: types.Message, state: FSMContext):
                 f"💳 Предоплата 50%: {prepayment} ₽"
             )
 
-            # ===== ИЗМЕНЕНИЕ: текст клиенту с указанием предоплаты =====
+            # Сообщение клиенту с ссылкой
             await message.answer(
                 f"✅ Ваш заказ принят!\n\n"
                 f"👤 Имя: {name}\n"
@@ -621,19 +648,11 @@ async def confirm_order(message: types.Message, state: FSMContext):
                 "После оплаты мы начнём работу над вашим заказом."
             )
         else:
-            await message.answer(
-                "Извините, не удалось создать платёж. Попробуйте позже или свяжитесь с нами через контакты на сайте."
-            )
+            await message.answer("Извините, не удалось создать платёж. Попробуйте позже или свяжитесь с нами через контакты на сайте.")
+        
         await state.clear()
-
-    elif message.text.lower() == "нет":
-        await state.clear()
-        await message.answer(
-            "Хорошо, возвращаемся к выбору. Нажмите «Цены», чтобы начать заново.",
-            reply_markup=main_kb
-        )
     else:
-        await message.answer("Пожалуйста, ответьте «да» или «нет».")
+        await message.answer("Пожалуйста, подтвердите, что вы ознакомились с офертой, написав «да».")
 
 # ===== ОБРАБОТЧИКИ КНОПОК (консультант) =====
 @dp.message(F.text == "⚙️ Технологии")
