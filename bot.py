@@ -517,7 +517,7 @@ async def process_type(message: types.Message, state: FSMContext):
         )
         # Сразу переводим на подтверждение суммы
         await state.update_data(
-            total=16000, 
+            total=28000, 
             services_text="AI-агент на сайт (консультант 24/7)"
         )
         await state.set_state(OrderForm.waiting_for_confirmation)
